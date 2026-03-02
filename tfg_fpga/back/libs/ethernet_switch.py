@@ -35,8 +35,8 @@ import xfcp.i2c_node
 
 import serial
 
-"from control_methods import *"
-from control_registers import *
+from control_methods import *
+"from control_registers import *"
 
 import threading
 
