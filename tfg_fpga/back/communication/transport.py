@@ -4,6 +4,8 @@ from typing import Protocol, Optional
 class Transport(Protocol):
     def request(self, payload: bytes) -> bytes: ...
 
+
+
 @dataclass
 class SerialTransport:
     port: str
