@@ -1,7 +1,25 @@
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Tuple
+from typing import Dict
 from unittest.mock import Mock
+
+
+@dataclass(frozen=True)
+class PortCounters:
+    # RX
+    rx_in_frames: int
+    rx_out_frames: int
+    rx_gen_frames: int
+    rx_in_true_frames: int
+    rx_gen_true_frames: int
+
+    # TX
+    tx_in_frames: int
+    tx_out_frames: int
+    tx_in_true_frames: int
+
+    # Extra (si quieres ver el total gen)
+    gen_frames: int
 
 
 @dataclass
@@ -17,8 +35,14 @@ class PortState:
     # contadores (mock)
     rx_in_frames: int = 0
     rx_out_frames: int = 0
+    rx_gen_frames: int = 0
+    rx_in_true_frames: int = 0
+    rx_gen_true_frames: int = 0
+
     tx_in_frames: int = 0
     tx_out_frames: int = 0
+    tx_in_true_frames: int = 0
+
     gen_frames: int = 0
 
     _last_tick: float = field(default_factory=time.time)
@@ -32,13 +56,8 @@ class MockRegisterBank:
     def __init__(self, port_count: int = 4):
         self.port_count = port_count
         self.ports: Dict[int, PortState] = {i: PortState() for i in range(port_count)}
+    self.globals: Dict[str, int] = {"PORT_COUNT": port_count}
 
-        # "registros globales" si los necesitas
-        self.globals: Dict[str, int] = {
-            "PORT_COUNT": port_count,
-        }
-
-    # --- helper: "direccion" mock = (port_id, "REG_NAME") o ("GLOBAL", "X") ---
     def read(self, addr, length: int = 4):
         """
         addr puede ser:
@@ -52,9 +71,8 @@ class MockRegisterBank:
 
             port_id = scope
             p = self.ports[port_id]
-            return getattr(p, name.lower(), 0)  # ej: "RX_IN_FRAMES" -> rx_in_frames
+            return getattr(p, name.lower(), 0)
 
-        # si te llaman con algo inesperado
         return 0
 
     def write(self, addr, value):
@@ -71,10 +89,10 @@ class MockRegisterBank:
                 p.gen_enabled = bool(value)
                 return
             if name == "RX_MUX":
-                p.rx_mux = value
+                p.rx_mux = str(value)
                 return
             if name == "TX_MUX":
-                p.tx_mux = value
+                p.tx_mux = str(value)
                 return
             if name == "LENGTH":
                 p.length = int(value)
@@ -86,7 +104,6 @@ class MockRegisterBank:
                 p.counter_frac = int(value)
                 return
 
-        # si te llaman con algo inesperado, no hacemos nada
         return
 
     def tick(self):
@@ -99,7 +116,6 @@ class MockRegisterBank:
             if not p.gen_enabled:
                 continue
 
-            # frames/s simulados: cuanto mayor counter, más lento
             base_fps = 500
             fps = base_fps / max(1, p.counter)
             inc = int(fps * dt)
@@ -108,15 +124,35 @@ class MockRegisterBank:
 
             p.gen_frames += inc
 
+            p.rx_gen_frames += inc
+
+            p.rx_gen_true_frames += inc
+            p.tx_in_true_frames += inc
+
             if p.rx_mux == "gen":
                 p.rx_in_frames += inc
                 p.rx_out_frames += inc
+                p.rx_in_true_frames += inc
 
             p.tx_in_frames += inc
             p.tx_out_frames += inc
 
+    
+    def read_counters(self, port_id: int) -> PortCounters:
+        p = self.ports[port_id]
+        return PortCounters(
+            rx_in_frames=p.rx_in_frames,
+            rx_out_frames=p.rx_out_frames,
+            rx_gen_frames=p.rx_gen_frames,
+            rx_in_true_frames=p.rx_in_true_frames,
+            rx_gen_true_frames=p.rx_gen_true_frames,
+            tx_in_frames=p.tx_in_frames,
+            tx_out_frames=p.tx_out_frames,
+            tx_in_true_frames=p.tx_in_true_frames,
+            gen_frames=p.gen_frames,
+        )
 
-# --- esto es lo que tu tutor quiere: usar unittest.mock para mockear el acceso de bajo nivel ---
+
 bank = MockRegisterBank(port_count=4)
 
 read_func = Mock(side_effect=bank.read)
@@ -124,12 +160,13 @@ write_func = Mock(side_effect=bank.write)
 
 
 if __name__ == "__main__":
-    # Demo rápida
     write_func((0, "RX_MUX"), "gen")
+    write_func((0, "TX_MUX"), "mac")
     write_func((0, "GEN_ENABLE"), 1)
     write_func((0, "COUNTER"), 1)
 
     for _ in range(5):
         time.sleep(1)
         bank.tick()
-        print("Port0 GEN_FRAMES =", read_func((0, "GEN_FRAMES")))
+        counters = bank.read_counters(0)
+        print("Port0 counters:", counters)
