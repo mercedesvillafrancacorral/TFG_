@@ -1,30 +1,25 @@
 import time
+import threading
 from dataclasses import dataclass, field
 from typing import Dict
 from unittest.mock import Mock
 
-
 @dataclass(frozen=True)
 class PortCounters:
-    # RX
+    """Objeto de dominio que representa los contadores en un instante dado."""
     rx_in_frames: int
     rx_out_frames: int
     rx_gen_frames: int
     rx_in_true_frames: int
     rx_gen_true_frames: int
-
-    # TX
     tx_in_frames: int
     tx_out_frames: int
     tx_in_true_frames: int
-
-    # Extra (si quieres ver el total gen)
     gen_frames: int
-
 
 @dataclass
 class PortState:
-    # configuración (mock)
+    """Estado interno del Simulador para cada puerto."""
     rx_mux: str = "null"   # "null" | "mac" | "gen"
     tx_mux: str = "null"   # "null" | "mac"
     gen_enabled: bool = False
@@ -32,7 +27,7 @@ class PortState:
     counter: int = 1
     counter_frac: int = 0
 
-    # contadores (mock)
+    # Contadores acumulados
     rx_in_frames: int = 0
     rx_out_frames: int = 0
     rx_gen_frames: int = 0
@@ -47,23 +42,33 @@ class PortState:
 
     _last_tick: float = field(default_factory=time.time)
 
-
 class MockRegisterBank:
     """
-    Simula una FPGA con N puertos.
-    Ofrece read(addr, length) y write(addr, value) como si fueran accesos a registros.
+    Simula una FPGA con N puertos que genera datos de forma autónoma.
     """
-    def __init__(self, port_count: int = 4):
+    def __init__(self, port_count: int = 4, auto_start: bool = True):
         self.port_count = port_count
         self.ports: Dict[int, PortState] = {i: PortState() for i in range(port_count)}
-    self.globals: Dict[str, int] = {"PORT_COUNT": port_count}
+        self.globals: Dict[str, int] = {"PORT_COUNT": port_count}
+
+        # --- MOTOR AUTÓNOMO ---
+        if auto_start:
+            # Activamos el puerto 0 por defecto para que haya tráfico inmediato
+            self.write((0, "RX_MUX"), "gen")
+            self.write((0, "GEN_ENABLE"), 1)
+            
+            # Lanzamos el hilo que hace los 'ticks' en segundo plano
+            self._thread = threading.Thread(target=self._auto_tick_worker, daemon=True)
+            self._thread.start()
+
+    def _auto_tick_worker(self):
+        """Bucle que corre en segundo plano simulando el paso del tiempo."""
+        while True:
+            self.tick()
+            time.sleep(0.5)  # Actualiza cada medio segundo para mayor fluidez
 
     def read(self, addr, length: int = 4):
-        """
-        addr puede ser:
-          - ("GLOBAL", "PORT_COUNT")
-          - (port_id, "RX_IN_FRAMES"), etc.
-        """
+        """Lectura simulada de registros."""
         if isinstance(addr, tuple) and len(addr) == 2:
             scope, name = addr
             if scope == "GLOBAL":
@@ -72,14 +77,10 @@ class MockRegisterBank:
             port_id = scope
             p = self.ports[port_id]
             return getattr(p, name.lower(), 0)
-
         return 0
 
     def write(self, addr, value):
-        """
-        addr puede ser:
-          - (port_id, "GEN_ENABLE") / (port_id, "RX_MUX"), etc.
-        """
+        """Escritura simulada de registros."""
         if isinstance(addr, tuple) and len(addr) == 2:
             port_id, name = addr
             p = self.ports[port_id]
@@ -87,27 +88,19 @@ class MockRegisterBank:
             name = name.upper()
             if name == "GEN_ENABLE":
                 p.gen_enabled = bool(value)
-                return
-            if name == "RX_MUX":
+            elif name == "RX_MUX":
                 p.rx_mux = str(value)
-                return
-            if name == "TX_MUX":
+            elif name == "TX_MUX":
                 p.tx_mux = str(value)
-                return
-            if name == "LENGTH":
+            elif name == "LENGTH":
                 p.length = int(value)
-                return
-            if name == "COUNTER":
+            elif name == "COUNTER":
                 p.counter = max(1, int(value))
-                return
-            if name == "COUNTER_FRAC":
+            elif name == "COUNTER_FRAC":
                 p.counter_frac = int(value)
-                return
-
-        return
 
     def tick(self):
-        """Simula el paso del tiempo e incrementa contadores si el generador está activo."""
+        """Lógica matemática que incrementa los contadores según el tiempo transcurrido."""
         for p in self.ports.values():
             now = time.time()
             dt = now - p._last_tick
@@ -119,13 +112,13 @@ class MockRegisterBank:
             base_fps = 500
             fps = base_fps / max(1, p.counter)
             inc = int(fps * dt)
+            
             if inc <= 0:
                 continue
 
+            # Incrementos de contadores
             p.gen_frames += inc
-
             p.rx_gen_frames += inc
-
             p.rx_gen_true_frames += inc
             p.tx_in_true_frames += inc
 
@@ -137,8 +130,8 @@ class MockRegisterBank:
             p.tx_in_frames += inc
             p.tx_out_frames += inc
 
-    
     def read_counters(self, port_id: int) -> PortCounters:
+        """Devuelve una foto fija de los contadores actuales del puerto."""
         p = self.ports[port_id]
         return PortCounters(
             rx_in_frames=p.rx_in_frames,
@@ -152,21 +145,20 @@ class MockRegisterBank:
             gen_frames=p.gen_frames,
         )
 
-
+# Instancia global para que al importar este archivo ya tengas una "FPGA" lista
 bank = MockRegisterBank(port_count=4)
 
+# Mocks para compatibilidad con código que use funciones de lectura/escritura directas
 read_func = Mock(side_effect=bank.read)
 write_func = Mock(side_effect=bank.write)
 
-
+# --- PRUEBA RÁPIDA (Solo si ejecutas este archivo directamente) ---
 if __name__ == "__main__":
-    write_func((0, "RX_MUX"), "gen")
-    write_func((0, "TX_MUX"), "mac")
-    write_func((0, "GEN_ENABLE"), 1)
-    write_func((0, "COUNTER"), 1)
-
-    for _ in range(5):
-        time.sleep(1)
-        bank.tick()
-        counters = bank.read_counters(0)
-        print("Port0 counters:", counters)
+    print("Simulador autónomo iniciado. Ctrl+C para parar.")
+    try:
+        while True:
+            counters = bank.read_counters(0)
+            print(f"Puerto 0: {counters.rx_in_frames} frames", end="\r")
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nSimulación detenida.")
