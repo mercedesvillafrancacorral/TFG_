@@ -158,6 +158,7 @@ if __name__ == "__main__":
     try:
         while True:
             counters = bank.read_counters(0)
+            print(f"Port0 contadores: {counters}")
             print(f"Puerto 0: {counters.rx_in_frames} frames", end="\r")
             time.sleep(0.5)
     except KeyboardInterrupt:

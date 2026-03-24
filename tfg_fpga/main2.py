@@ -1,45 +1,35 @@
-import sys
-import os
 import time
-from back.port.infrastructure.outbound.mock_register_bank import MockRegisterBank
-# Configuramos la ruta para que Python vea la carpeta 'back'
-ruta_actual = os.path.dirname(os.path.abspath(__file__))
-if ruta_actual not in sys.path:
-    sys.path.insert(0, ruta_actual)
+from back.port.infrastructure.outbound.mock_register_bank import bank
+from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
+from back.port.application.PortCountersServiceImpl import PortCountersServiceImpl
 
-print(f">>> Ejecutando desde: {ruta_actual}")
+# 1. Montamos la arquitectura
+adaptador = MockHardwareAdapter(bank)
+servicio = PortCountersServiceImpl(adaptador)
 
-try:
-    # IMPORTANTE: Observa que ponemos 'nombre_archivo.NombreClase'
-    # 1. Carpeta 'application' -> Archivo 'PortCountersServiceImpl' -> Clase 'PortCountersServiceImpl'
-    from back.port.application.PortCountersServiceImpl import PortCountersServiceImpl
+print("="*70)
+print(f"{'LECTURA':<10} | {'PUERTO 0 (RX)':<15} | {'PUERTO 1 (RX)':<15} | {'ESTADO P1'}")
+print("-" * 70)
+
+for i in range(12):
+    # Leemos ambos puertos a través del servicio
+    p0 = servicio.get_counters(0)
+    p1 = servicio.get_counters(1)
     
-    # 2. Carpeta 'outbound' -> Archivo 'adapter_mock' -> Clase 'MockHardwareAdapter'
-    from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
+    estado_p1 = "off" if p1.rx_in_frames == 0 else "on"
     
-    # 3. Carpeta 'outbound' -> Archivo 'mock_register_bank' -> Clase 'MockRegisterBank'
-    from back.port.infrastructure.outbound.mock_register_bank import MockRegisterBank
-    
-    print("✅ ¡LOGRADO! Todos los módulos cargados.")
+    # Imprimimos los datos alineados
+    print(f"Muestra {i+1:<3} | {p0.rx_in_frames:<15,} | {p1.rx_in_frames:<15,} | {estado_p1}")
 
-    # Inicialización (Arquitectura Hexagonal)
-    mi_mock = MockRegisterBank(port_count=4)
-    adaptador = MockHardwareAdapter(mi_mock)
-    servicio = PortCountersServiceImpl(adaptador)
-    
-    print(">>> Leyendo contadores (5 iteraciones)...")
+    # --- MAGIA: En la muestra 5, activamos el Puerto 1 ---
+    if i == 5:
+        print("\n>>> [ORDEN] Activando generador en el Puerto 1...")
+        # Usamos el banco para escribir en el registro (como haría la FPGA)
+        bank.write((1, "RX_MUX"), "gen")
+        bank.write((1, "GEN_ENABLE"), 1)
+        print("-" * 70)
 
-    for i in range(5):
-        mi_mock.tick()
-        for _ in range(10): mi_mock.tick()
-        # Asumiendo que el método se llama get_counters y el puerto es el 0
-        datos = servicio.get_counters(0)
-        print(f"LECTURA {i+1}: {datos}")
-        time.sleep(1)
+    time.sleep(1)
 
-except Exception as e:
-    print(f"\n❌ ERROR EN EJECUCIÓN: {e}")
-    import traceback
-    traceback.print_exc()
-
-input("\nPresiona ENTER para finalizar...")
+print("="*70)
+print(">>> Simulación multipuerto completada con éxito.")
