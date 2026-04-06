@@ -3,25 +3,30 @@ import threading
 from dataclasses import dataclass, field
 from typing import Dict
 from unittest.mock import Mock
+import back.port.infrastructure.adapter as elasticsearchAdapter
+
 
 @dataclass(frozen=True)
 class PortCounters:
     """Objeto de dominio que representa los contadores en un instante dado."""
-    rx_in_frames: int
-    rx_out_frames: int
-    rx_gen_frames: int
-    rx_in_true_frames: int
-    rx_gen_true_frames: int
-    tx_in_frames: int
-    tx_out_frames: int
-    tx_in_true_frames: int
+
+    rx_port_in_frames: int
+    rx_port_out_frames: int
+    rx_port_gen_frames: int
+    rx_port_in_true_frames: int
+    rx_port_gen_true_frames: int
+    tx_port_in_frames: int
+    tx_port_out_frames: int
+    tx_port_in_true_frames: int
     gen_frames: int
+
 
 @dataclass
 class PortState:
     """Estado interno del Simulador para cada puerto."""
-    rx_mux: str = "null"   # "null" | "mac" | "gen"
-    tx_mux: str = "null"   # "null" | "mac"
+
+    rx_mux: str = "null"  # "null" | "mac" | "gen"
+    tx_mux: str = "null"  # "null" | "mac"
     gen_enabled: bool = False
     length: int = 64
     counter: int = 1
@@ -42,10 +47,12 @@ class PortState:
 
     _last_tick: float = field(default_factory=time.time)
 
+
 class MockRegisterBank:
     """
     Simula una FPGA con N puertos que genera datos de forma autónoma.
     """
+
     def __init__(self, port_count: int = 4, auto_start: bool = True):
         self.port_count = port_count
         self.ports: Dict[int, PortState] = {i: PortState() for i in range(port_count)}
@@ -56,7 +63,7 @@ class MockRegisterBank:
             # Activamos el puerto 0 por defecto para que haya tráfico inmediato
             self.write((0, "RX_MUX"), "gen")
             self.write((0, "GEN_ENABLE"), 1)
-            
+
             # Lanzamos el hilo que hace los 'ticks' en segundo plano
             self._thread = threading.Thread(target=self._auto_tick_worker, daemon=True)
             self._thread.start()
@@ -112,7 +119,7 @@ class MockRegisterBank:
             base_fps = 500
             fps = base_fps / max(1, p.counter)
             inc = int(fps * dt)
-            
+
             if inc <= 0:
                 continue
 
@@ -134,16 +141,17 @@ class MockRegisterBank:
         """Devuelve una foto fija de los contadores actuales del puerto."""
         p = self.ports[port_id]
         return PortCounters(
-            rx_in_frames=p.rx_in_frames,
-            rx_out_frames=p.rx_out_frames,
-            rx_gen_frames=p.rx_gen_frames,
-            rx_in_true_frames=p.rx_in_true_frames,
-            rx_gen_true_frames=p.rx_gen_true_frames,
-            tx_in_frames=p.tx_in_frames,
-            tx_out_frames=p.tx_out_frames,
-            tx_in_true_frames=p.tx_in_true_frames,
+            rx_port_in_frames=p.rx_in_frames,
+            rx_port_out_frames=p.rx_out_frames,
+            rx_port_gen_frames=p.rx_gen_frames,
+            rx_port_in_true_frames=p.rx_in_true_frames,
+            rx_port_gen_true_frames=p.rx_gen_true_frames,
+            tx_port_in_frames=p.tx_in_frames,
+            tx_port_out_frames=p.tx_out_frames,
+            tx_port_in_true_frames=p.tx_in_true_frames,
             gen_frames=p.gen_frames,
         )
+
 
 # Instancia global para que al importar este archivo ya tengas una "FPGA" lista
 bank = MockRegisterBank(port_count=4)
@@ -155,9 +163,11 @@ write_func = Mock(side_effect=bank.write)
 # --- PRUEBA RÁPIDA (Solo si ejecutas este archivo directamente) ---
 if __name__ == "__main__":
     print("Simulador autónomo iniciado. Ctrl+C para parar.")
+    es_adapter = elasticsearchAdapter()
     try:
         while True:
             counters = bank.read_counters(0)
+            es_adapter.publish_counters(port_id=0, counters=counters)
             print(f"Port0 contadores: {counters}")
             print(f"Puerto 0: {counters.rx_in_frames} frames", end="\r")
             time.sleep(0.5)

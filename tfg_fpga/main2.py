@@ -2,34 +2,29 @@ import time
 from back.port.infrastructure.outbound.mock_register_bank import bank
 from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
 from back.port.application.PortCountersServiceImpl import PortCountersServiceImpl
-
-# 1. Montamos la arquitectura
+from tfg_fpga.back.port.infrastructure.elasticshearch.adapter.elasticshearchAdapter import elasticsearchAdapter# 1. Montamos la arquitectura
 adaptador = MockHardwareAdapter(bank)
 servicio = PortCountersServiceImpl(adaptador)
-
+es_adapter = elasticsearchAdapter()
 print("="*70)
 print(f"{'LECTURA':<10} | {'PUERTO 0 (RX)':<15} | {'PUERTO 1 (RX)':<15} | {'ESTADO P1'}")
 print("-" * 70)
-
-for i in range(12):
-    # Leemos ambos puertos a través del servicio
+i = 0  # LA 'i' FUERA DEL BUCLE
+while True:
     p0 = servicio.get_counters(0)
     p1 = servicio.get_counters(1)
     
+    es_adapter.publish_counters(0, p0)
+    es_adapter.publish_counters(1, p1)
+
     estado_p1 = "off" if p1.rx_in_frames == 0 else "on"
     
-    # Imprimimos los datos alineados
     print(f"Muestra {i+1:<3} | {p0.rx_in_frames:<15,} | {p1.rx_in_frames:<15,} | {estado_p1}")
 
-    # --- MAGIA: En la muestra 5, activamos el Puerto 1 ---
     if i == 5:
         print("\n>>> [ORDEN] Activando generador en el Puerto 1...")
-        # Usamos el banco para escribir en el registro (como haría la FPGA)
         bank.write((1, "RX_MUX"), "gen")
         bank.write((1, "GEN_ENABLE"), 1)
-        print("-" * 70)
 
+    i += 1  # SUMAMOS 1 A LA i PARA QUE CAMBIE LA MUESTRA
     time.sleep(1)
-
-print("="*70)
-print(">>> Simulación multipuerto completada con éxito.")
