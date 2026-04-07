@@ -4,6 +4,7 @@ import sys
 from back.port.infrastructure.outbound.mock_register_bank import bank
 from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
 from back.port.application.PortCountersServiceImpl import PortCountersServiceImpl
+
 # Importamos tu adaptador
 from back.port.infrastructure.adapter.elasticshearchAdapter import elasticsearchAdapter
 
@@ -52,3 +53,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
