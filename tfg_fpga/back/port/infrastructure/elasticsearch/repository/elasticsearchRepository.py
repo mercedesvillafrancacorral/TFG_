@@ -1,7 +1,7 @@
 import os
 
 from elasticsearch import Elasticsearch
-from time import time
+import time
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.PortCountersRepository import PortCountersRepository
 
