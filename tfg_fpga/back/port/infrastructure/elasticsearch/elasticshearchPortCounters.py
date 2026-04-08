@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass 
-class elasticsearchPortCountersDomain:
+class elasticsearchPortCounters:
     rx_port_in_frames: int
     rx_port_out_frames: int
     rx_port_gen_frames: int

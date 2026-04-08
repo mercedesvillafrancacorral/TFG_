@@ -6,7 +6,7 @@ from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAd
 from back.port.application.PortCountersServiceImpl import PortCountersServiceImpl
 
 # Importamos tu adaptador
-from back.port.infrastructure.adapter.elasticshearchAdapter import elasticsearchAdapter
+from back.port.infrastructure.elasticshearch.adapter.elasticshearchAdapter import elasticsearchAdapter
 
 def main():
     # 1. Montamos la arquitectura de capas

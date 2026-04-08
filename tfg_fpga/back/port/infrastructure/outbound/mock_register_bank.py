@@ -3,23 +3,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Dict
 from unittest.mock import Mock
-import back.port.infrastructure.adapter as elasticsearchAdapter
-
-
-@dataclass(frozen=True)
-class PortCounters:
-    """Objeto de dominio que representa los contadores en un instante dado."""
-
-    rx_port_in_frames: int
-    rx_port_out_frames: int
-    rx_port_gen_frames: int
-    rx_port_in_true_frames: int
-    rx_port_gen_true_frames: int
-    tx_port_in_frames: int
-    tx_port_out_frames: int
-    tx_port_in_true_frames: int
-    gen_frames: int
-
+from back.port.domain.PortCounters import PortCounters
 
 @dataclass
 class PortState:
@@ -139,17 +123,17 @@ class MockRegisterBank:
 
     def read_counters(self, port_id: int) -> PortCounters:
         """Devuelve una foto fija de los contadores actuales del puerto."""
-        p = self.ports[port_id]
+        portCounter = self.ports[port_id]
         return PortCounters(
-            rx_port_in_frames=p.rx_in_frames,
-            rx_port_out_frames=p.rx_out_frames,
-            rx_port_gen_frames=p.rx_gen_frames,
-            rx_port_in_true_frames=p.rx_in_true_frames,
-            rx_port_gen_true_frames=p.rx_gen_true_frames,
-            tx_port_in_frames=p.tx_in_frames,
-            tx_port_out_frames=p.tx_out_frames,
-            tx_port_in_true_frames=p.tx_in_true_frames,
-            gen_frames=p.gen_frames,
+            rx_port_in_frames=portCounter.rx_in_frames,
+            rx_port_out_frames=portCounter.rx_out_frames,
+            rx_port_gen_frames=portCounter.rx_gen_frames,
+            rx_port_in_true_frames=portCounter.rx_in_true_frames,
+            rx_port_gen_true_frames=portCounter.rx_gen_true_frames,
+            tx_port_in_frames=portCounter.tx_in_frames,
+            tx_port_out_frames=portCounter.tx_out_frames,
+            tx_port_in_true_frames=portCounter.tx_in_true_frames,
+            gen_frames=portCounter.gen_frames,
         )
 
 
@@ -160,16 +144,4 @@ bank = MockRegisterBank(port_count=4)
 read_func = Mock(side_effect=bank.read)
 write_func = Mock(side_effect=bank.write)
 
-# --- PRUEBA RÁPIDA (Solo si ejecutas este archivo directamente) ---
-if __name__ == "__main__":
-    print("Simulador autónomo iniciado. Ctrl+C para parar.")
-    es_adapter = elasticsearchAdapter()
-    try:
-        while True:
-            counters = bank.read_counters(0)
-            es_adapter.publish_counters(port_id=0, counters=counters)
-            print(f"Port0 contadores: {counters}")
-            print(f"Puerto 0: {counters.rx_in_frames} frames", end="\r")
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        print("\nSimulación detenida.")
+

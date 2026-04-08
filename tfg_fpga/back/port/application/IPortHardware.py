@@ -4,3 +4,17 @@ class IPortHardware(ABC):
     @abstractmethod
     def read_counters(self, port_id: int) -> PortCounters:
         pass
+
+    @abstractmethod
+    def get_ports(self)->list[int]:
+        pass
+
+    "para configuracion"
+    @abstractmethod
+    def set_generator (
+        self,port_id:int, enable:bool,lenght:int, counter:int, counter_frac :int
+    )-> None: 
+        pass
+    @abstractmethod
+    def set_mux(self,port_id:int, rx_mux:str | None=None,  tx_mux: str | None = None) -> None:
+        pass

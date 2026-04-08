@@ -4,7 +4,9 @@
 "Nos estamos centrando en la MONITORIZACIÓN solamente en esta clase "
 from dataclasses import dataclass
 
-@dataclass
+"ponemos el frozen=true para que el obejtivo de dominio sea inmutable"
+
+@dataclass(frozen=True)
 class PortCounters:
     
     "contador de frames totales que han entrado al puerto"
@@ -21,7 +23,7 @@ class PortCounters:
     tx_port_in_frames: int
     tx_port_out_frames: int
     tx_port_in_true_frames: int
-    generate_frames: int
+    gen_frames: int
 
 
 

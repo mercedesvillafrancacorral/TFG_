@@ -1,61 +1,51 @@
-from back.port.domain.PortCounters import PortCounters
-from back.port.infrastructure.dto.MockInputDto import MockInputDto
-from back.port.infrastructure.elasticshearch.elasticshearchPortCountersDomain import (
-    elasticsearchPortCountersDomain,
-)
-from back.port.infrastructure.mapper.PortCounterMapper import PortCountersMapper
 
 
 class PortCountersService:
-    """Servicio con validación y flujo completo (DTO -> Domain -> ES Domain)."""
 
-    def __init__(self, max_ports: int = 4):
-        self.max_ports = max_ports
-
-    def save_counters(
-        self, dto: MockInputDto, port_id: int
-    ) -> elasticsearchPortCountersDomain:
-        """
-        Flujo completo:
-        1. Validar port_id existe
-        2. Validar valores no negativos
-        3. Mapear DTO -> Domain
-        4. Mapear Domain -> ElasticsearchDomain
-        """
-        self._validate_port_id(port_id)
-        self._validate_counters(dto)
-
-        domain = PortCountersMapper.to_domain(dto, port_id)
-        es_domain = PortCountersMapper.to_elasticsearch_domain(domain, port_id)
-
-        return es_domain
-
+    def __init__(self,hardware :IPortHardware):
+        self.hardware=hardware
+    
+    def get_ports(self)>list[int]:
+        return self.hardware.get_ports()
+    
     def get_counters(self, port_id: int) -> PortCounters:
-        """Método legacy para compatibilidad."""
         self._validate_port_id(port_id)
-        return PortCounters(
-            rx_port_in_frames=0,
-            rx_port_out_frames=0,
-            rx_port_gen_frames=0,
-            rx_port_in_true_frames=0,
-            rx_port_gen_true_frames=0,
-            tx_port_in_frames=0,
-            tx_port_out_frames=0,
-            tx_port_in_true_frames=0,
-            gen_frames=0,
+        return self.hardware.read_counters(port_id)
+
+    def configure_generator(
+        self,
+        port_id: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int
+    ) -> None:
+        self._validate_port_id(port_id)
+        if length <= 0:
+            raise ValueError("length debe ser mayor que 0")
+        if counter <= 0:
+            raise ValueError("counter debe ser mayor que 0")
+
+        self.hardware.set_generator(
+            port_id=port_id,
+            enabled=enabled,
+            length=length,
+            counter=counter,
+            counter_frac=counter_frac,
         )
 
-    def _validate_port_id(self, port_id: int):
-        """Valida que el port_id esté en rango."""
-        if port_id < 0 or port_id >= self.max_ports:
-            raise ValueError(
-                f"Port ID {port_id} fuera de rango. Debe estar entre 0 y {self.max_ports - 1}"
-            )
+    def configure_mux(self, port_id: int, rx_mux: str | None = None, tx_mux: str | None = None) -> None:
+        self._validate_port_id(port_id)
+        allowed_rx = {"null", "mac", "gen"}
+        allowed_tx = {"null", "mac"}
 
-    def _validate_counters(self, dto: MockInputDto):
-        """Valida que todos los contadores sean no negativos."""
-        for field_name, value in vars(dto).items():
-            if value < 0:
-                raise ValueError(
-                    f"Contador {field_name} no puede ser negativo: {value}"
-                )
+        if rx_mux is not None and rx_mux not in allowed_rx:
+            raise ValueError(f"rx_mux inválido: {rx_mux}")
+        if tx_mux is not None and tx_mux not in allowed_tx:
+            raise ValueError(f"tx_mux inválido: {tx_mux}")
+
+        self.hardware.set_mux(port_id=port_id, rx_mux=rx_mux, tx_mux=tx_mux)
+
+    def _validate_port_id(self, port_id: int) -> None:
+        if port_id not in self.hardware.list_ports():
+            raise ValueError(f"Puerto no válido: {port_id}")
