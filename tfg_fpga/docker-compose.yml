@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: es_tfg
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_tfg
+    ports:
+      - "3001:3000"
+    environment:
+    
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - elasticsearch
+
+  api:
+    build: .
+    container_name: fast_api_tfg
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  # 📡 Data collector
+  collector:
+    build: .
+    container_name: collector
+    command: python data_collector.py
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+volumes:
+  es_data:

@@ -1,10 +1,13 @@
 
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.IPortHardware import IPortHardware
+from back.port.application.PortCountersRepository import PortCountersRepository
+
 class PortCountersService:
 
-    def __init__(self,hardware :IPortHardware):
+    def __init__(self,hardware :IPortHardware, repository: PortCountersRepository):
         self.hardware=hardware
+        self.repository = repository
     
     def get_ports(self)->list[int]:
         return self.hardware.get_ports()
@@ -50,3 +53,11 @@ class PortCountersService:
     def _validate_port_id(self, port_id: int) -> None:
         if port_id not in self.hardware.get_ports():
             raise ValueError(f"Puerto no válido: {port_id}")
+        
+    def get_history(self, port_id: int, limit: int = 100):
+    
+     self.repository.get_history(port_id, limit)
+
+    def get_latest(self, port_id: int):
+
+     self.repository.get_latest(port_id)

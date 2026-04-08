@@ -4,13 +4,11 @@ from typing import Optional
 
 from back.port.infrastructure.inbound.api.dependecies import get_port_service
 from back.port.application.PortCountersService import PortCountersService
-from back.port.infrastructure.elasticsearch.adapter.elasticshearchAdapter import (
-    ElasticsearchAdapter,
-)
+from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
 
 router = APIRouter(prefix="/ports", tags=["history"])
 
-es_adapter = ElasticsearchAdapter()
+es_adapter = ElasticsearchRepository()
 
 
 @router.get("/{port_id}/history")

@@ -71,3 +71,8 @@ def configure_mux(
         return MessageResponse(message=f"Mux configurado en el puerto {port_id}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+    
+@router.get("/{port_id}/history")
+def get_history(port_id: int, service: PortCountersService = Depends(get_port_service)):
+    return service.get_history(port_id)
