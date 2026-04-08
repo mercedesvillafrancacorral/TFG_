@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 
-@dataclass 
-class elasticsearchPortCounters:
+@dataclass
+class elasticsearchPortCountersDomain:
     rx_port_in_frames: int
     rx_port_out_frames: int
     rx_port_gen_frames: int

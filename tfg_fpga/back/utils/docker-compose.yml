@@ -42,4 +42,22 @@ services:
     # Mantiene el contenedor abierto incluso si hay errores
     stdin_open: true
     tty: true
-    command: python main2.py
+    command: python tfg_fpga.main2.py
+
+  fast_api_app:
+    build: .
+    container_name: fast_api_app
+    volumes:
+      - .:/app # Permite que los cambios en tu código se vean sin reconstruir todo
+    depends_on:
+      elasticsearch:
+        condition: service_healthy # No arranca la App hasta que la DB esté lista
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    # Mantiene el contenedor abierto incluso si hay errores
+    ports:
+     - "8080:8080"
+    stdin_open: true
+    tty: true
+    command: uvicorn tfg_fpga.main:app --host 0.0.0.0 --port 8080 --reload
+

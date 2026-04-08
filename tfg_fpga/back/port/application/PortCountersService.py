@@ -1,11 +1,12 @@
 
-
+from back.port.domain.PortCounters import PortCounters
+from back.port.application.IPortHardware import IPortHardware
 class PortCountersService:
 
     def __init__(self,hardware :IPortHardware):
         self.hardware=hardware
     
-    def get_ports(self)>list[int]:
+    def get_ports(self)->list[int]:
         return self.hardware.get_ports()
     
     def get_counters(self, port_id: int) -> PortCounters:
@@ -47,5 +48,5 @@ class PortCountersService:
         self.hardware.set_mux(port_id=port_id, rx_mux=rx_mux, tx_mux=tx_mux)
 
     def _validate_port_id(self, port_id: int) -> None:
-        if port_id not in self.hardware.list_ports():
+        if port_id not in self.hardware.get_ports():
             raise ValueError(f"Puerto no válido: {port_id}")

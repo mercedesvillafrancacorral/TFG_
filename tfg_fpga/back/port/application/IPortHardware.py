@@ -12,7 +12,7 @@ class IPortHardware(ABC):
     "para configuracion"
     @abstractmethod
     def set_generator (
-        self,port_id:int, enable:bool,lenght:int, counter:int, counter_frac :int
+        self,port_id:int, enabled:bool,length:int, counter:int, counter_frac :int
     )-> None: 
         pass
     @abstractmethod
