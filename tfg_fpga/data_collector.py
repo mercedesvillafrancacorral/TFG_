@@ -5,10 +5,7 @@ from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAd
 from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
 from back.port.application.PortCountersService import PortCountersService
 
-
-
 def main():
-
     print("🚀 Iniciando recolector de datos...")
 
     # 1. Montar arquitectura
@@ -27,7 +24,7 @@ def main():
                 counters = service.get_counters(port_id)
 
                 # Guardar en Elasticsearch
-                service.repository.save(port_id, counters)
+                repository.save(port_id, counters)
 
                 print(
                     f"Puerto {port_id} | RX: {counters.rx_port_in_frames} | GEN: {counters.gen_frames}"
@@ -41,4 +38,4 @@ def main():
 
 
     if __name__ == "__main__":
-          main()
+        main()
