@@ -19,7 +19,7 @@ services:
 
   # 2. Visualización: El Dashboard
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.6.0
     container_name: grafana
     ports:
       - "3001:3000" # Acceso en http://localhost:3001

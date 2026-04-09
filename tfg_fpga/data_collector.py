@@ -5,14 +5,33 @@ from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAd
 from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
 from back.port.application.PortCountersService import PortCountersService
 
+
+def wait_for_elasticsearch(repository, retries=30, delay=2):
+    for _ in range(retries):
+        try:
+            if repository.es.ping():
+                print("✅ Elasticsearch disponible")
+                return True
+        except Exception:
+            pass
+
+        print("⏳ Esperando Elasticsearch...")
+        time.sleep(delay)
+
+    print("❌ No se pudo conectar a Elasticsearch")
+    return False
+
+
 def main():
     print("🚀 Iniciando recolector de datos...")
 
-    # 1. Montar arquitectura
     hardware = MockHardwareAdapter(bank)
     repository = ElasticsearchRepository()
-    service = PortCountersService(hardware, repository)
 
+    if not wait_for_elasticsearch(repository):
+        raise RuntimeError("Elasticsearch no está disponible")
+
+    service = PortCountersService(hardware, repository)
     ports = service.get_ports()
 
     print(f"📡 Puertos detectados: {ports}")
@@ -22,8 +41,6 @@ def main():
         while True:
             for port_id in ports:
                 counters = service.get_counters(port_id)
-
-                # Guardar en Elasticsearch
                 repository.save(port_id, counters)
 
                 print(
@@ -37,5 +54,5 @@ def main():
         print("\n🛑 Recolector detenido")
 
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()
