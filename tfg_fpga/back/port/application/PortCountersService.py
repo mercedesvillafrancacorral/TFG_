@@ -14,7 +14,9 @@ class PortCountersService:
     
     def get_counters(self, port_id: int) -> PortCounters:
         self._validate_port_id(port_id)
-        return self.hardware.read_counters(port_id)
+        counters = self.hardware.read_counters(port_id)
+        self.repository.save(port_id, counters)
+        return counters
 
     def configure_generator(
         self,
@@ -55,9 +57,9 @@ class PortCountersService:
             raise ValueError(f"Puerto no válido: {port_id}")
         
     def get_history(self, port_id: int, limit: int = 100):
-    
-     self.repository.get_history(port_id, limit)
+     self._validate_port_id(port_id)
+     return self.repository.get_history(port_id, limit)
 
     def get_latest(self, port_id: int):
-
-     self.repository.get_latest(port_id)
+     self._validate_port_id(port_id)
+     return self.repository.get_latest(port_id)

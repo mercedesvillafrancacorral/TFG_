@@ -10,5 +10,9 @@ class PortCountersRepository(ABC):
         pass
 
     @abstractmethod
-    def get_history(self, port_id: int):
+    def get_history(self, port_id: int, limit: int = 100):
+        pass
+
+    @abstractmethod
+    def get_latest(self, port_id: int):
         pass

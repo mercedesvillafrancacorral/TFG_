@@ -27,15 +27,25 @@ import os
 import sys
 
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'lib', 'xfcp', 'python')))
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
+XFCP_PYTHON_ROOT = os.path.abspath(
+    os.path.join(CURRENT_DIR, "..", "..", "..", "lib", "xfcp", "python")
+)
+
+
+if XFCP_PYTHON_ROOT not in sys.path:
+    sys.path.insert(0, XFCP_PYTHON_ROOT)
+
 import xfcp.interface
-import xfcp.node
-import xfcp.i2c_node
+from xfcp.node import Node
+from xfcp.i2c_node import I2CNode
+
 
 import serial
 
-from control_methods import *
-
+#from control_methods import *
+from back.communication.mock_control_methods import *
+from back.communication.control_registers import *
 import threading
 
 import time
