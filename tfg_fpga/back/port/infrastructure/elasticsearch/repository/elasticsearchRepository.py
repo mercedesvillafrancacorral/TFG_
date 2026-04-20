@@ -14,20 +14,19 @@ class ElasticsearchRepository(PortCountersRepository):
 
         self.es = Elasticsearch(hosts, verify_certs=False)
         self.index_name = "port_counters"
-
-        # 🔁 Esperar a que Elasticsearch esté listo
+        #HAY QUE ESPERAR A QUE ELASTICSEARCH ESTE  ARRIBA 
         for i in range(10):
             try:
                 if self.es.ping():
-                    print("✅ Conectado a Elasticsearch")
+                    print("Conectado a Elasticsearch")
                     break
             except Exception:
                 pass
 
-            print("⏳ Esperando Elasticsearch...")
+            print("Esperando Elasticsearch...")
             time.sleep(2)
         else:
-            print("⚠️ No se pudo conectar a Elasticsearch")
+            print("ERROR :No se pudo conectar a Elasticsearch")
     def save(self, port_id: int, counters: PortCounters):
         document = {
             "@timestamp": datetime.utcnow().isoformat(),

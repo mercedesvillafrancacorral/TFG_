@@ -1,55 +1,57 @@
 import time
+import os
+import httpx
 
-from back.port.infrastructure.outbound.mock_register_bank import bank
-from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
-from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
-from back.port.application.PortCountersService import PortCountersService
+API_URL = os.getenv("API_URL", "http://api:8000")
 
 
-def wait_for_elasticsearch(repository, retries=30, delay=2):
+def wait_for_api(retries=30, delay=2):
     for _ in range(retries):
         try:
-            if repository.es.ping():
-                print("✅ Elasticsearch disponible")
+            r = httpx.get(f"{API_URL}/health", timeout=2)
+            if r.status_code == 200:
+                print("✅ API disponible")
                 return True
         except Exception:
             pass
-
-        print("⏳ Esperando Elasticsearch...")
+        print("⏳ Esperando API...")
         time.sleep(delay)
-
-    print("❌ No se pudo conectar a Elasticsearch")
+    print("❌ No se pudo conectar a la API")
     return False
+
+
+def get_ports() -> list:
+    r = httpx.get(f"{API_URL}/ports", timeout=5)
+    r.raise_for_status()
+    return r.json()["ports"]
+
+
+def collect_once(ports: list):
+    for port_id in ports:
+        try:
+            r = httpx.get(f"{API_URL}/ports/{port_id}/counters", timeout=5)
+            r.raise_for_status()
+            data = r.json()
+            print(f"Puerto {port_id} | RX: {data['rx_port_in_frames']} | GEN: {data['gen_frames']}")
+        except Exception as e:
+            print(f"Puerto {port_id} | Error: {e}")
+    print("-" * 50)
 
 
 def main():
     print("🚀 Iniciando recolector de datos...")
 
-    hardware = MockHardwareAdapter(bank)
-    repository = ElasticsearchRepository()
+    if not wait_for_api():
+        raise RuntimeError("API no está disponible")
 
-    if not wait_for_elasticsearch(repository):
-        raise RuntimeError("Elasticsearch no está disponible")
-
-    service = PortCountersService(hardware, repository)
-    ports = service.get_ports()
-
+    ports = get_ports()
     print(f"📡 Puertos detectados: {ports}")
-    print("📊 Enviando datos a Elasticsearch...\n")
+    print("📊 Recolectando y guardando en Elasticsearch...\n")
 
     try:
         while True:
-            for port_id in ports:
-                counters = service.get_counters(port_id)
-                repository.save(port_id, counters)
-
-                print(
-                    f"Puerto {port_id} | RX: {counters.rx_port_in_frames} | GEN: {counters.gen_frames}"
-                )
-
-            print("-" * 50)
+            collect_once(ports)
             time.sleep(1)
-
     except KeyboardInterrupt:
         print("\n🛑 Recolector detenido")
 

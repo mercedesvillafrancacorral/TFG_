@@ -2,7 +2,6 @@ import os
 from elasticsearch import Elasticsearch
 class elasticsearchAdapter:
     def __init__(self, hosts=["http://localhost:9200"]):
-        # Con la versión <8.0.0, esto no dará errores de cabeceras
        host = os.getenv("ES_HOST", "http://localhost:9200")
        self.es = Elasticsearch([host])
        self.index_name = "fpg_metrics_index"
