@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from back.port.infrastructure.inbound.api.controller_api import router
-from back.port.infrastructure.inbound.api.history_controller import (
-    router as history_router,
-)
+
 from back.port.infrastructure.inbound.api.grafana_controller import (
     router as grafana_router,
 )
@@ -23,7 +21,6 @@ app.add_middleware(
 )
 
 app.include_router(router)
-app.include_router(history_router)
 app.include_router(grafana_router)
 
 

@@ -10,9 +10,8 @@ from back.port.infrastructure.outbound.TutorPortHardwareAdapter import TutorPort
 # Adaptador concreto que implementa IPortHardware
 #cuando quier utilziar el mock hay que cambiarlo 
 hardware = TutorPortHardwareAdapter(port_count=4)
+repo = ElasticsearchRepository()
+service = PortCountersService(hardware, repo)
 
 def get_port_service():
-    hw = TutorPortHardwareAdapter(port_count=4)
-    repo = ElasticsearchRepository()
-
-    return PortCountersService(hw, repo)
+    return service

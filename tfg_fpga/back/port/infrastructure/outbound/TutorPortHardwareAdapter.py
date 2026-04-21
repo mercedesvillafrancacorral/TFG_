@@ -30,7 +30,7 @@ class TutorPortHardwareAdapter(IPortHardware):
             tx_port_in_frames=port.get_tx_port_in_frame_counter(),
             tx_port_out_frames=port.get_tx_port_out_frame_counter(),
             tx_port_in_true_frames=port.get_tx_port_in_true_frame_counter(),
-            gen_frames=port.get_rx_port_gen_frame_counter(),
+            gen_frames=port.get_gen_frame_counter(),
         )
 
     def set_generator(
