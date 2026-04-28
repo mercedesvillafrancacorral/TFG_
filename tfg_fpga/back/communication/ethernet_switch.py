@@ -29,7 +29,7 @@ import sys
 
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 XFCP_PYTHON_ROOT = os.path.abspath(
-    os.path.join(CURRENT_DIR, "..", "..", "..", "lib", "xfcp", "python")
+    os.path.join(CURRENT_DIR, "..", "libs", "xfcp", "python")
 )
 
 

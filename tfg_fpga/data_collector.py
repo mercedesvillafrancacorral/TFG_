@@ -39,7 +39,8 @@ def collect_once(ports: list):
             r = httpx.get(f"{API_URL}/ports/{port_id}/counters", timeout=5)
             r.raise_for_status()
             data = r.json()
-            logger.info(f"Puerto {port_id} | RX: {data['rx_port_in_frames']} | GEN: {data['gen_frames']}")
+            logger.info(f"Puerto {port_id} | RX: {data['rx_port_in_frames']} | GEN: {data['rx_port_gen_frames']}")
+
         except Exception as e:
             logger.error(f"Puerto {port_id} | Error: {e}")
 

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from back.port.application.PortCountersService import PortCountersService
-from back.port.infrastructure.inbound.api.dependecies import get_port_service
+from back.port.infrastructure.inbound.api.dependencies import get_port_service
 from back.port.infrastructure.inbound.api.model_response import (
     PortsResponse,
     PortCountersResponse,

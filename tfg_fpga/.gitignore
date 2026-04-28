@@ -1,2 +1,6 @@
-lib/xfcp/
+  __pycache__/
+  *.pyc
+  .env
+  *.egg-info/
+  .venv/
 *.md
