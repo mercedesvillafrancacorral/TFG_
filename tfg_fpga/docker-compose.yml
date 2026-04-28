@@ -45,7 +45,7 @@ services:
       - elasticsearch
       - grafana
 
-  # 📡 Data collector
+  
   collector:
     build: .
     container_name: collector
@@ -55,5 +55,3 @@ services:
     depends_on:
       - api
 
-volumes:
-  es_data:

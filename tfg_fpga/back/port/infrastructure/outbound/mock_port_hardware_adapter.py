@@ -4,7 +4,13 @@ from back.communication.ethernet_switch import Port
 from back.port.infrastructure.outbound.mock_register_bank import read_func, write_func
 
 
-class TutorPortHardwareAdapter(IPortHardware):
+class PortHardwareAdapter(IPortHardware):
+    RX_MULTIPLEXOR_NULL = "null"
+    RX_MULTIPLEXOR_MAC = "mac"
+    RX_MULTIPLEXOR_GENERATOR = "gen"
+    TX_MULTIPLEXOR_NULL = "null"
+    TX_MULTIPLEXOR_MAC = "mac"
+
     def __init__(self, port_count: int = 4, port_stride: int = 0x100):
         self.port_count = port_count
         self.port_stride = port_stride
@@ -30,7 +36,7 @@ class TutorPortHardwareAdapter(IPortHardware):
             tx_port_in_frames=port.get_tx_port_in_frame_counter(),
             tx_port_out_frames=port.get_tx_port_out_frame_counter(),
             tx_port_in_true_frames=port.get_tx_port_in_true_frame_counter(),
-            gen_frames=port.get_gen_frame_counter(),
+        
         )
 
     def set_generator(
@@ -60,14 +66,18 @@ class TutorPortHardwareAdapter(IPortHardware):
     ) -> None:
         port = self.ports[port_id]
 
-        if rx_mux == "null":
+        if rx_mux == self.RX_MULTIPLEXOR_NULL:
             port.set_rx_null_mux()
-        elif rx_mux == "mac":
+        elif rx_mux == self.RX_MULTIPLEXOR_MAC:
             port.set_rx_mac_mux()
-        elif rx_mux == "gen":
+        elif rx_mux == self.RX_MULTIPLEXOR_GENERATOR:
             port.set_rx_gen_mux()
+        elif rx_mux is not None:
+         raise ValueError(f" rx_mux value no válido: {rx_mux}")
 
-        if tx_mux == "null":
+        if tx_mux == self.TX_MULTIPLEXOR_NULL:
             port.set_tx_null_mux()
-        elif tx_mux == "mac":
+        elif tx_mux == self.TX_MULTIPLEXOR_MAC:
             port.set_tx_mac_mux()
+        elif tx_mux is not None:
+         raise ValueError(f" tx_mux value no válido: {tx_mux}")

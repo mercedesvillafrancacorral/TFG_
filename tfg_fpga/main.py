@@ -7,8 +7,8 @@ from back.port.infrastructure.inbound.api.grafana_controller import (
 )
 
 app = FastAPI(
-    title="TFG FPGA API",
-    description="API para configuración y monitorización de red de altas prestaciones",
+    title="TFG",
+    description="configuración y monitorización de red de altas prestaciones",
     version="1.0.0",
 )
 

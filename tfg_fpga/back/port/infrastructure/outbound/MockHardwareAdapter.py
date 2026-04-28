@@ -1,4 +1,4 @@
-from back.port.infrastructure.outbound.mock_register_bank import MockRegisterBank, bank
+from back.port.infrastructure.outbound.mock_register_bank import MockRegisterBank
 from back.port.application.IPortHardware import IPortHardware
 from back.port.domain.PortCounters import PortCounters
 class MockHardwareAdapter(IPortHardware):

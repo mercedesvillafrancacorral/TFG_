@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from back.port.application.PortCountersService import PortCountersService
-from back.port.infrastructure.inbound.api.dependecies import get_port_service, repo
+from back.port.infrastructure.inbound.api.dependecies import get_port_service
 from back.port.infrastructure.inbound.api.model_response import (
     PortsResponse,
     PortCountersResponse,
@@ -24,7 +24,11 @@ def get_ports(service: PortCountersService = Depends(get_port_service)):
 def get_counters(port_id: int, service: PortCountersService = Depends(get_port_service)):
     try:
         counters = service.get_counters(port_id)
-        return PortCountersResponse(
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    return PortCountersResponse(
             rx_port_in_frames=counters.rx_port_in_frames,
             rx_port_out_frames=counters.rx_port_out_frames,
             rx_port_gen_frames=counters.rx_port_gen_frames,
@@ -33,18 +37,18 @@ def get_counters(port_id: int, service: PortCountersService = Depends(get_port_s
             tx_port_in_frames=counters.tx_port_in_frames,
             tx_port_out_frames=counters.tx_port_out_frames,
             tx_port_in_true_frames=counters.tx_port_in_true_frames,
-            gen_frames=counters.gen_frames,
+        
         )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    
+    
 
 @router.post("/{port_id}/generator", response_model=MessageResponse)
 def configure_generator(
     port_id: int,
     request: GeneratorConfigRequest,
     service: PortCountersService = Depends(get_port_service),
-):
+):  
+    
     try:
         service.configure_generator(
             port_id=port_id,
@@ -53,9 +57,12 @@ def configure_generator(
             counter=request.counter,
             counter_frac=request.counter_frac,
         )
-        return MessageResponse(message=f"Generador configurado en el puerto {port_id}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return MessageResponse(
+        message=f"Traffic generator {generator_state} for port {port_id}"
+    )
 
 
 @router.post("/{port_id}/mux", response_model=MessageResponse)
@@ -74,81 +81,66 @@ def configure_mux(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# @router.get("/{port_id}/history")
+# def get_port_history(
+#     port_id: int,
+#     from_time: Optional[str] = Query(None, description="Start time (ISO format)"),
+#     to_time: Optional[str] = Query(None, description="End time (ISO format)"),
+#     limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
+#     service: PortCountersService = Depends(get_port_service),
+# ):
+#     try:
 
-@router.get("/{port_id}/history")
-def get_port_history(
-    port_id: int,
-    from_time: Optional[str] = Query(None, description="Start time (ISO format)"),
-    to_time: Optional[str] = Query(None, description="End time (ISO format)"),
-    limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
-    service: PortCountersService = Depends(get_port_service),
-):
-    try:
-        service.get_counters(port_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    try:
-        if from_time:
-            start = from_time
-        else:
-            dt = datetime.now()
-            dt = dt.replace(hour=dt.hour - 1)
-            start = dt.isoformat()
-
-        if to_time:
-            end = to_time
-        else:
-            end = datetime.now().isoformat()
-
-        results = repo.get_history(port_id=port_id, limit=limit)
-
-        return {
-            "port_id": port_id,
-            "from": start,
-            "to": end,
-            "count": len(results),
-            "data": results,
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#         start = from_time if from_time else (datetime.now() - timedelta(hours=1)).isoformat()
+#         end = to_time if to_time else datetime.now().isoformat()
+#         results = service.get_history(port_id=port_id, limit=limit)
+#         return {
+#             "port_id": port_id,
+#             "from": start,
+#             "to": end,
+#             "count": len(results),
+#             "data": results,
+#         }
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{port_id}/history/latest")
-def get_latest_counters(
-    port_id: int,
-    service: PortCountersService = Depends(get_port_service),
-):
-    try:
-        counters = service.get_counters(port_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# @router.get("/{port_id}/history/latest")
+# def get_latest_counters(
+#     port_id: int,
+#     service: PortCountersService = Depends(get_port_service),
+# ):
+#     try:
+#         counters = service.get_counters(port_id)
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
-    try:
-        latest = repo.get_latest(port_id)
-        return {
-            "port_id": port_id,
-            "current": {
-                "rx_port_in_frames": counters.rx_port_in_frames,
-                "rx_port_out_frames": counters.rx_port_out_frames,
-                "rx_port_gen_frames": counters.rx_port_gen_frames,
-                "tx_port_in_frames": counters.tx_port_in_frames,
-                "tx_port_out_frames": counters.tx_port_out_frames,
-                "gen_frames": counters.gen_frames,
-            },
-            "last_indexed": latest,
-        }
-    except Exception as e:
-        return {
-            "port_id": port_id,
-            "current": {
-                "rx_port_in_frames": counters.rx_port_in_frames,
-                "rx_port_out_frames": counters.rx_port_out_frames,
-                "rx_port_gen_frames": counters.rx_port_gen_frames,
-                "tx_port_in_frames": counters.tx_port_in_frames,
-                "tx_port_out_frames": counters.tx_port_out_frames,
-                "gen_frames": counters.gen_frames,
-            },
-            "last_indexed": None,
-        }
+#     try:
+#         latest =service.get_latest(port_id)
+#         return {
+#             "port_id": port_id,
+#             "current": {
+#                 "rx_port_in_frames": counters.rx_port_in_frames,
+#                 "rx_port_out_frames": counters.rx_port_out_frames,
+#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
+#                 "tx_port_in_frames": counters.tx_port_in_frames,
+#                 "tx_port_out_frames": counters.tx_port_out_frames,
+                
+#             },
+#             "last_indexed": latest,
+#         }
+#     except Exception as e:
+#         return {
+#             "port_id": port_id,
+#             "current": {
+#                 "rx_port_in_frames": counters.rx_port_in_frames,
+#                 "rx_port_out_frames": counters.rx_port_out_frames,
+#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
+#                 "tx_port_in_frames": counters.tx_port_in_frames,
+#                 "tx_port_out_frames": counters.tx_port_out_frames,
+                
+#             },
+#             "last_indexed": None,
+#         }

@@ -2,14 +2,12 @@
 #from back.port.infrastructure.outbound.MockHardwareAdapter import MockHardwareAdapter
 from back.port.application.PortCountersService import PortCountersService
 from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
-from back.port.infrastructure.outbound.TutorPortHardwareAdapter import TutorPortHardwareAdapter
+from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
 
-# Instancia única compartida del simulador
-#bank = MockRegisterBank(port_count=4, auto_start=True)
+#PONEMOS POR A 4 PARA SIMULAR 4 PUERTOS DE LA ZCU102 SY QUIERA ALVEO200 HABRIA QUE PONER 2
 
-# Adaptador concreto que implementa IPortHardware
-#cuando quier utilziar el mock hay que cambiarlo 
-hardware = TutorPortHardwareAdapter(port_count=4)
+
+hardware = PortHardwareAdapter(port_count=4)
 repo = ElasticsearchRepository()
 service = PortCountersService(hardware, repo)
 

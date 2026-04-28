@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./lib/xfcp/example/Arty/fpga/python"
+    ]
+}

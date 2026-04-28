@@ -137,6 +137,11 @@ def read_conf_reg_int(read_func, offset: int, address: int, length: int = 4) -> 
     return _read_port_arch_reg(port_id, address)
 
 
+def write_conf_reg_list(write_func, offset: int, address: int, data: list, bits_width: int = 1) -> None:
+    del write_func, offset, address, data, bits_width
+    return
+
+
 def write_conf_reg_int(write_func, offset: int, address: int, data: int) -> None:
     """
     Escritura genérica mínima.

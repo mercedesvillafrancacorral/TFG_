@@ -1,10 +1,13 @@
 import os
+import logging
 
 from elasticsearch import Elasticsearch
 import time
 from datetime import datetime
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.PortCountersRepository import PortCountersRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ElasticsearchRepository(PortCountersRepository):
@@ -18,15 +21,15 @@ class ElasticsearchRepository(PortCountersRepository):
         for i in range(10):
             try:
                 if self.es.ping():
-                    print("Conectado a Elasticsearch")
+                    logger.info("Conectado a Elasticsearch")
                     break
-            except Exception:
-                pass
+            except Exception as e:
+             logger.error(f"Ping fallido: {e}")
 
-            print("Esperando Elasticsearch...")
+            logger.warning("Esperando Elasticsearch...")
             time.sleep(2)
         else:
-            print("ERROR :No se pudo conectar a Elasticsearch")
+            logger.error("No se pudo conectar a Elasticsearch")
     def save(self, port_id: int, counters: PortCounters):
         document = {
             "@timestamp": datetime.utcnow().isoformat(),
@@ -39,7 +42,7 @@ class ElasticsearchRepository(PortCountersRepository):
             "tx_port_in_frames": counters.tx_port_in_frames,
             "tx_port_out_frames": counters.tx_port_out_frames,
             "tx_port_in_true_frames": counters.tx_port_in_true_frames,
-            "gen_frames": counters.gen_frames,
+            
         }
 
         return self.es.index(index=self.index_name, document=document)
@@ -53,7 +56,7 @@ class ElasticsearchRepository(PortCountersRepository):
             "size": limit
         }
 
-        result = self.es.search(index=self.index_name, body=query)
+        result = self.es.search(index=self.index_name, **query)
         hits = result.get("hits", {}).get("hits", [])
 
         return [hit["_source"] for hit in hits]
@@ -65,7 +68,7 @@ class ElasticsearchRepository(PortCountersRepository):
             "size": 1
         }
 
-        result = self.es.search(index=self.index_name, body=query)
+        result = self.es.search(index=self.index_name, **query)
         hits = result.get("hits", {}).get("hits", [])
 
         if hits:

@@ -1,5 +1,4 @@
 elasticsearch>=8.0.0,<9.0.0
-datetime
 fastapi>=0.103.0
 uvicorn
 pydantic>=2.0.0

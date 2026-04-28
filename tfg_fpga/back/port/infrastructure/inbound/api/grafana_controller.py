@@ -19,39 +19,39 @@ def grafana_health():
         raise HTTPException(status_code=503, detail=f"Grafana no disponible: {e}")
 
 
-@router.get("/dashboards")
-def list_dashboards():
-    try:
-        return _client().list_dashboards()
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+# @router.get("/dashboards")
+# def list_dashboards():
+#     try:
+#         return _client().list_dashboards()
+#     except httpx.HTTPError as e:
+#         raise HTTPException(status_code=503, detail=str(e))
 
 
-@router.get("/dashboard/{uid}")
-def get_dashboard(uid: str):
-    try:
-        return _client().get_dashboard(uid)
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"Dashboard '{uid}' no encontrado")
-        raise HTTPException(status_code=503, detail=str(e))
+# @router.get("/dashboard/{uid}")
+# def get_dashboard(uid: str):
+#     try:
+#         return _client().get_dashboard(uid)
+#     except httpx.HTTPStatusError as e:
+#         if e.response.status_code == 404:
+#             raise HTTPException(status_code=404, detail=f"Dashboard '{uid}' no encontrado")
+#         raise HTTPException(status_code=503, detail=str(e))
 
 
-@router.get("/ports/{port_id}/dashboard")
-def get_or_create_port_dashboard(port_id: int):
-    client = _client()
-    uid = f"port-{port_id}"
-    try:
-        return client.get_dashboard(uid)
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code != 404:
-            raise HTTPException(status_code=503, detail=str(e))
+# @router.get("/ports/{port_id}/dashboard")
+# def get_or_create_port_dashboard(port_id: int):
+#     client = _client()
+#     uid = f"port-{port_id}"
+#     try:
+#         return client.get_dashboard(uid)
+#     except httpx.HTTPStatusError as e:
+#         if e.response.status_code != 404:
+#             raise HTTPException(status_code=503, detail=str(e))
 
-    try:
-        result = client.create_or_update_dashboard(build_port_dashboard(port_id))
-        return {"created": True, "uid": uid, "url": result.get("url")}
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+#     try:
+#         result = client.create_or_update_dashboard(build_port_dashboard(port_id))
+#         return {"created": True, "uid": uid, "url": result.get("url")}
+#     except httpx.HTTPError as e:
+#         raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.post("/ports/{port_id}/dashboard")

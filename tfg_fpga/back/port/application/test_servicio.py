@@ -1,7 +1,7 @@
 import time
 
 from back.port.application.PortCountersService import PortCountersService
-from back.port.infrastructure.outbound.TutorPortHardwareAdapter import TutorPortHardwareAdapter
+from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
 from back.port.application.PortCountersRepository import PortCountersRepository
 
 
@@ -17,7 +17,7 @@ class DummyRepository(PortCountersRepository):
 
 
 def main():
-    hw = TutorPortHardwareAdapter(port_count=4)
+    hw = PortHardwareAdapter(port_count=4)
     repo = DummyRepository()
     service = PortCountersService(hw, repo)
 

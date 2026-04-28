@@ -23,7 +23,7 @@ class PortCounters:
     tx_port_in_frames: int
     tx_port_out_frames: int
     tx_port_in_true_frames: int
-    gen_frames: int
+    
 
 
 

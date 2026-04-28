@@ -1,9 +1,9 @@
-from back.port.infrastructure.outbound.TutorPortHardwareAdapter import TutorPortHardwareAdapter
+from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
 
 import time
 
 def main():
-    hw = TutorPortHardwareAdapter(port_count=4)
+    hw = PortHardwareAdapter(port_count=4)
 
     print("PORTS:", hw.get_ports())
     print("ANTES:", hw.read_counters(0))
