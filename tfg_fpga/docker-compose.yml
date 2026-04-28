@@ -36,7 +36,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MODE=simulation
+      - mode=simulation
       - ES_HOST=http://elasticsearch:9200
       - GRAFANA_URL=http://grafana:3000
       - GRAFANA_USER=admin
