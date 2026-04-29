@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "traffic_generator"
+version = "0.1.0"
+description = ""
+authors = ["Carlos Megías <narg@ugr.es>"]
+packages = [{include = "traffic_generator"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+cocotb = "^1.7.2"
+cocotb-bus = "^0.2.1"
+cocotb-test = "^0.2.4"
+cocotbext-axi = "^0.1.20"
+pytest = "^7.2.1"
+scapy = "^2.5.0"
+cocotbext-eth = "^0.1.20"
+pytest-xdist = "^3.1.0"
+jinja2 = "^3.1.2"
+pyserial = "^3.5"
+magicmock = "^0.3"
+jupyter = "^1.0.0"
+numpy = "^2.0.0"
+seaborn = "^0.13.2"
+matplotlib = "^3.9.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+console_output_style = "progress"
