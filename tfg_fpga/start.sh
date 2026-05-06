@@ -44,15 +44,13 @@ if curl -s "http://localhost:$ES_PORT" > /dev/null 2>&1; then
     ok "Elasticsearch ya está corriendo"
 else
     info "Arrancando Elasticsearch..."
-    if command -v systemctl &> /dev/null && systemctl list-units --type=service | grep -q elasticsearch; then
+    if systemctl list-unit-files 2>/dev/null | grep -q elasticsearch; then
         sudo systemctl start elasticsearch
-    elif command -v elasticsearch &> /dev/null; then
-        elasticsearch -d -p /tmp/elasticsearch.pid
     else
         err "Elasticsearch no está instalado. Instálalo con:\n  sudo apt install elasticsearch"
     fi
     info "Esperando a que Elasticsearch arranque..."
-    for i in $(seq 1 15); do
+    for i in $(seq 1 30); do
         sleep 2
         if curl -s "http://localhost:$ES_PORT" > /dev/null 2>&1; then
             ok "Elasticsearch listo"

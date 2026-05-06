@@ -31,4 +31,5 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    import os
+    return {"status": "ok", "mode": os.getenv("MODE", "simulation").lower()}
