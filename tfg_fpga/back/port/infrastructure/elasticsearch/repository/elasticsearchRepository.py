@@ -1,5 +1,4 @@
 import os
-import logging
 
 from elasticsearch import Elasticsearch
 import time
@@ -7,29 +6,27 @@ from datetime import datetime
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.PortCountersRepository import PortCountersRepository
 
-logger = logging.getLogger(__name__)
-
 
 class ElasticsearchRepository(PortCountersRepository):
     def __init__(self, hosts=None):
         if hosts is None:
-            hosts = [os.getenv("ES_HOST", "http://elasticsearch:9200")]
+            hosts = [os.getenv("ES_HOST", "http://es_tfg:9200")]
 
         self.es = Elasticsearch(hosts, verify_certs=False)
         self.index_name = "port_counters"
         #HAY QUE ESPERAR A QUE ELASTICSEARCH ESTE  ARRIBA 
-        for i in range(10):
+        for i in range(30):
             try:
                 if self.es.ping():
-                    logger.info("Conectado a Elasticsearch")
+                    print("Conectado a Elasticsearch")
                     break
-            except Exception as e:
-             logger.error(f"Ping fallido: {e}")
+            except Exception:
+                pass
 
-            logger.warning("Esperando Elasticsearch...")
+            print("Esperando Elasticsearch...")
             time.sleep(2)
         else:
-            logger.error("No se pudo conectar a Elasticsearch")
+            print("ERROR :No se pudo conectar a Elasticsearch")
     def save(self, port_id: int, counters: PortCounters):
         document = {
             "@timestamp": datetime.utcnow().isoformat(),
@@ -56,7 +53,7 @@ class ElasticsearchRepository(PortCountersRepository):
             "size": limit
         }
 
-        result = self.es.search(index=self.index_name, **query)
+        result = self.es.search(index=self.index_name, body=query)
         hits = result.get("hits", {}).get("hits", [])
 
         return [hit["_source"] for hit in hits]
@@ -68,7 +65,7 @@ class ElasticsearchRepository(PortCountersRepository):
             "size": 1
         }
 
-        result = self.es.search(index=self.index_name, **query)
+        result = self.es.search(index=self.index_name, body=query)
         hits = result.get("hits", {}).get("hits", [])
 
         if hits:

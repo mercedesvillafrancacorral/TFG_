@@ -1,24 +1,23 @@
-
 import os
 
 from back.port.application.PortCountersService import PortCountersService
 from back.port.infrastructure.elasticsearch.repository.elasticsearchRepository import ElasticsearchRepository
-from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
 
-#PONEMOS POR A 4 PARA SIMULAR 4 PUERTOS DE LA ZCU102 SY QUIERA ALVEO200 HABRIA QUE PONER 2
-
-
-#hardware = PortHardwareAdapter(port_count=4)
 repo = ElasticsearchRepository()
 
-mode = os.getenv("mode", "simulation").lower()
+mode = os.getenv("MODE", "simulation").lower()
 
 if mode == "real":
-     # Fase 2: aqui iria el adaptador para la fpga real
-    raise NotImplementedError("Adaptador hardware real pendiente — Fase 2")
+    from back.port.infrastructure.outbound.fpga_real_adapter import FPGATrafficGeneratorAdapter
+    uart_port = os.getenv("UART_PORT", "/dev/ttyUSB2")
+    hardware = FPGATrafficGeneratorAdapter(uart_port=uart_port)
 else:
-    # Fase 1: Simulación local 
+    # Fase 1: Simulación local — ZCU102=4 puertos, Alveo U200=2 puertos
+    from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
     hardware = PortHardwareAdapter(port_count=4)
-    service = PortCountersService(hardware, repo)
+
+service = PortCountersService(hardware, repo)
+
+
 def get_port_service():
     return service
