@@ -25,7 +25,7 @@ if [ ! -d "$VENV" ]; then
     python3 -m venv "$VENV"
 fi
 source "$VENV/bin/activate"
-pip install -q -r "$SCRIPT_DIR/tfg_fpga/git statusrequirements.txt"
+pip install -q -r "$SCRIPT_DIR/requirements.txt"
 ok "Entorno virtual listo"
 
 info "Comprobando puerto serie $UART_PORT..."
