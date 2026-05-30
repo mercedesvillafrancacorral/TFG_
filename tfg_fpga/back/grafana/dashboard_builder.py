@@ -45,7 +45,7 @@ def _rate_metrics(fields: list) -> list:
     for i, field in enumerate(fields):
         max_id = str(i * 2 + 1)
         deriv_id = str(i * 2 + 2)
-        metrics.append({"type": "max", "field": field, "id": max_id})
+        metrics.append({"type": "max", "field": field, "id": max_id, "hide": True})
         metrics.append({
             "type": "derivative",
             "id": deriv_id,
