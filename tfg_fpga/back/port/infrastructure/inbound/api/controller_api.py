@@ -159,10 +159,9 @@ def reset_fpga():
             timeout=120,
             cwd=FPGA_DIR,
         )
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"returncode={result.returncode} | stdout={result.stdout} | stderr={result.stderr}")
-        return MessageResponse(message=f"FPGA reseteada correctamente | stdout={result.stdout}")
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Timeout al programar la FPGA")
+         if result.returncode != 0:
+            raise HTTPException(status_code=500, detail="Error al programar la FPGA")
+        return MessageResponse(message="FPGA reseteada correctamente")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+        
