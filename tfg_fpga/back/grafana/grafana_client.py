@@ -5,7 +5,7 @@ GRAFANA_URL = os.getenv("GRAFANA_URL", "http://grafana:3000")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "admin")
 GRAFANA_EXTERNAL_URL = os.getenv("GRAFANA_EXTERNAL_URL", "")
-GRAFANA_EXTERNAL_PORT = os.getenv("GRAFANA_EXTERNAL_PORT", "3001")
+GRAFANA_EXTERNAL_PORT = os.getenv("GRAFANA_EXTERNAL_PORT", "3000")
 
 
 class GrafanaClient:
