@@ -13,6 +13,8 @@ from back.port.infrastructure.inbound.api.model_response import (
     MessageResponse,
 )
 
+FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
+
 router = APIRouter(prefix="/ports", tags=["ports"])
 
 
