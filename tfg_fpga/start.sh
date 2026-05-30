@@ -134,3 +134,7 @@ sudo \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT
+
+info "Arrancando colector de datos..."
+API_URL=http://localhost:$API_PORT "$VENV/bin/python" data_collector.py &
+ok "Colector de datos arrancado"
