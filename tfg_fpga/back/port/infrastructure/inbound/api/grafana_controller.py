@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 import httpx
 
-from back.grafana.client import GrafanaClient
+from back.grafana.grafana_client import GrafanaClient
 from back.grafana.dashboard_builder import build_port_dashboard
 
 router = APIRouter(prefix="/grafana", tags=["grafana"])
