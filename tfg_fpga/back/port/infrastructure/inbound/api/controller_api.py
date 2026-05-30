@@ -144,3 +144,21 @@ def configure_mux(
 #             },
 #             "last_indexed": None,
 #         }
+@router.post ("/reset_fpga")
+def reset_fpga():
+    script = os.path.join(FPGA_DIR, "program.sh")
+    bit= os.path.join(FPGA_DIR, "fpga.bit")
+    try:
+        result = subprocess.run(
+            ["bash", script, bit],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail=result.stderr)
+        return MessageResponse(message="FPGA reseteada correctamente")
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Timeout al programar la FPGA")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
