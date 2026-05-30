@@ -51,6 +51,7 @@ def _rate_metrics(fields: list) -> list:
             "id": deriv_id,
             "pipelineAgg": max_id,
             "settings": {"unit": "1s"},
+            "field": field,
         })
     return metrics
 
