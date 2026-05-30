@@ -1,9 +1,10 @@
 DS_UID = "es-port-counters"
+DS_REF = {"type": "elasticsearch", "uid": DS_UID}
 
 
 def _es_target(port_id: int, metrics: list, bucket_id: str) -> dict:
     return {
-        "datasource": {"type": "elasticsearch", "uid": DS_UID},
+        "datasource": DS_REF,
         "query": f"port_id:{port_id}",
         "alias": "{{field}}",
         "timeField": "@timestamp",
@@ -26,7 +27,7 @@ def _timeseries_panel(panel_id: int, title: str, port_id: int, metrics: list, x:
         "type": "timeseries",
         "title": title,
         "gridPos": {"x": x, "y": y, "h": 8, "w": 12},
-        "datasource": {"type": "elasticsearch", "uid": DS_UID},
+        "datasource": DS_REF,
         "targets": [_es_target(port_id, metrics, str(panel_id * 10))],
         "fieldConfig": {
             "defaults": {
