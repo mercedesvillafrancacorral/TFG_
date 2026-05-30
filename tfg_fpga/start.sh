@@ -86,5 +86,4 @@ sudo \
     GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
-    GRAFANA_EXTERNAL_URL="http://localhost:$GRAFANA_PORT" \
     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT
