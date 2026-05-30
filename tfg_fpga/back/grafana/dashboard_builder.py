@@ -39,17 +39,33 @@ def _timeseries_panel(panel_id: int, title: str, port_id: int, metrics: list, x:
     }
 
 
+def _rate_metrics(fields: list) -> list:
+    """Devuelve métricas de tasa (frames/s) usando max + derivative por campo."""
+    metrics = []
+    for i, field in enumerate(fields):
+        max_id = str(i * 2 + 1)
+        deriv_id = str(i * 2 + 2)
+        metrics.append({"type": "max", "field": field, "id": max_id})
+        metrics.append({
+            "type": "derivative",
+            "id": deriv_id,
+            "pipelineAgg": max_id,
+            "settings": {"unit": "1s"},
+        })
+    return metrics
+
+
 def build_port_dashboard(port_id: int) -> dict:
-    rx_metrics = [
-        {"type": "max", "field": "rx_port_in_frames", "id": "1"},
-        {"type": "max", "field": "rx_port_out_frames", "id": "2"},
-        {"type": "max", "field": "rx_port_gen_frames", "id": "3"},
-    ]
-    tx_metrics = [
-        {"type": "max", "field": "tx_port_in_frames", "id": "1"},
-        {"type": "max", "field": "tx_port_out_frames", "id": "2"},
-        {"type": "max", "field": "tx_port_in_true_frames", "id": "3"},
-    ]
+    rx_metrics = _rate_metrics([
+        "rx_port_in_frames",
+        "rx_port_out_frames",
+        "rx_port_gen_frames",
+    ])
+    tx_metrics = _rate_metrics([
+        "tx_port_in_frames",
+        "tx_port_out_frames",
+        "tx_port_in_true_frames",
+    ])
 
     return {
         "uid": f"port-{port_id}",
