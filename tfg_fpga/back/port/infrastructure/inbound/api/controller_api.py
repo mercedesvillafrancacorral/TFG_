@@ -157,6 +157,7 @@ def reset_fpga():
             capture_output=True,
             text=True,
             timeout=120,
+            cwd=FPGA_DIR,
         )
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"returncode={result.returncode} | stdout={result.stdout} | stderr={result.stderr}")
