@@ -120,10 +120,6 @@ else
     done
 fi
 
-info "Arrancando colector de datos..."
-API_URL=http://localhost:$API_PORT "$VENV/bin/python" data_collector.py &
-ok "Colector de datos arrancado"
-
 # ─── 5. API FastAPI ──────────────────────────────────────────────
 info "Arrancando API FastAPI (MODE=real)..."
 cd "$SCRIPT_DIR"
@@ -137,4 +133,23 @@ sudo \
     GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
-    "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT
+    "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
+
+# ─── 6. Colector de datos ─────────────────────────────────────────
+info "Esperando a que la API esté lista..."
+for i in $(seq 1 30); do
+    sleep 2
+    if curl -s "http://localhost:$API_PORT/health" > /dev/null 2>&1; then
+        ok "API lista"
+        break
+    fi
+    if [ $i -eq 15 ]; then
+        err "La API no arrancó a tiempo"
+    fi
+done
+
+info "Arrancando colector de datos..."
+API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" &
+ok "Colector de datos arrancado"
+
+wait
