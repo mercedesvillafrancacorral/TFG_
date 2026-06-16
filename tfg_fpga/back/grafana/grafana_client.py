@@ -1,7 +1,7 @@
 import os
 import httpx
 
-GRAFANA_URL = os.getenv("GRAFANA_URL", "http://grafana:3000")
+GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3000")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "admin")
 GRAFANA_EXTERNAL_URL = os.getenv("GRAFANA_EXTERNAL_URL", "")

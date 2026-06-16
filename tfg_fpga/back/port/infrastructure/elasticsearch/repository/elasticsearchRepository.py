@@ -10,7 +10,7 @@ from back.port.application.PortCountersRepository import PortCountersRepository
 class ElasticsearchRepository(PortCountersRepository):
     def __init__(self, hosts=None):
         if hosts is None:
-            hosts = [os.getenv("ES_HOST", "http://es_tfg:9200")]
+            hosts = [os.getenv("ES_HOST", "http://localhost:9200")]
 
         self.es = Elasticsearch(hosts, verify_certs=False)
         self.index_name = "port_counters"
