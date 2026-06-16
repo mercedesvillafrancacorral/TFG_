@@ -29,7 +29,7 @@ class ElasticsearchRepository(PortCountersRepository):
             print("ERROR :No se pudo conectar a Elasticsearch")
     def save(self, port_id: int, counters: PortCounters):
         document = {
-            "@timestamp": datetime.utcnow().isoformat(),
+            "@timestamp": datetime.utcnow().isoformat() + "Z",
             "port_id": port_id,
             "rx_port_in_frames": counters.rx_port_in_frames,
             "rx_port_out_frames": counters.rx_port_out_frames,
