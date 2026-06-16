@@ -5,7 +5,7 @@ DS_REF = {"type": "elasticsearch", "uid": DS_UID}
 def _es_target(port_id: int, metrics: list, bucket_id: str) -> dict:
     return {
         "datasource": DS_REF,
-        "query": f"port_id:{port_id}",
+        "query": f"port_id:[{port_id} TO {port_id}]",
         "alias": "{{field}}",
         "timeField": "@timestamp",
         "metrics": metrics,
@@ -48,9 +48,9 @@ def _max_metrics(fields: list) -> list:
 
 def build_port_dashboard(port_id: int) -> dict:
     rx_metrics = _max_metrics([
-        "rx_port_in_frames",
-        "rx_port_out_frames",
         "rx_port_gen_frames",
+        "rx_port_out_frames",
+        "rx_port_in_frames",
     ])
     tx_metrics = _max_metrics([
         "tx_port_in_frames",
