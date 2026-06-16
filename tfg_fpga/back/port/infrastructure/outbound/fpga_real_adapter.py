@@ -58,7 +58,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         """Establece conexión con la FPGA vía XFCP/UART"""
         try:
             print(f"\n{'='*60}")
-            print(f"🔌 Conectando a FPGA")
+            print(f" Conectando a FPGA")
             print(f"{'='*60}")
             print(f"Puerto: {self.uart_port}")
             print(f"Baud rate: {self.baud_rate}")
@@ -72,7 +72,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             
             # Enumerar dispositivos
             self.node = self.interface.enumerate()
-            print("✓ Dispositivo XFCP detectado")
+            print(" Dispositivo XFCP detectado")
             
             # Crear TrafficGenerator usando código del tutor
             self.traffic_generator = TrafficGenerator.fromRegisters(
@@ -80,11 +80,11 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 read_func=self.node.read,
                 offset=0x0
             )
-            print("✓ TrafficGenerator inicializado")
+            print(" TrafficGenerator inicializado")
             
             # Mostrar información de puertos detectados
             num_ports = len(self.traffic_generator.port_dict)
-            print(f"\n📊 Hardware detectado:")
+            print(f"\n Hardware detectado:")
             print(f"   Total de puertos: {num_ports}")
             
             for port_id, port in self.traffic_generator.port_dict.items():
@@ -96,21 +96,16 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 print(f"      GEN habilitado: {bool(port.GEN_TRAFFIC_ENABLE)}")
             
             print(f"\n{'='*60}")
-            print(f"✅ Conexión con FPGA exitosa")
+            print(f" Conexión con FPGA exitosa")
             print(f"{'='*60}\n")
             
         except Exception as e:
             print(f"\n{'='*60}")
-            print(f"❌ ERROR AL CONECTAR CON FPGA")
+            print(f" ERROR AL CONECTAR CON FPGA")
             print(f"{'='*60}")
             raise ConnectionError(
                 f"No se pudo conectar con la FPGA en {self.uart_port}\n\n"
-                f"Error: {e}\n\n"
-                f"Verifica:\n"
-                f"  1. FPGA conectada y encendida\n"
-                f"  2. FPGA programada (bash program.sh fpga.bit)\n"
-                f"  3. Permisos del puerto: sudo chmod 666 {self.uart_port}\n"
-                f"  4. Puerto correcto: ls /dev/ttyUSB*\n"
+               
             )
     
     # ========================================================================
@@ -207,7 +202,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         
         try:
             if enabled:
-                print(f"\n⚙️  Activando generador en puerto {port_id}:")
+                print(f"\n  Activando generador en puerto {port_id}:")
                 print(f"   Frame length: {length} bytes")
                 print(f"   Counter: {counter}")
                 print(f"   Counter frac: {counter_frac}")
@@ -230,7 +225,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 print(f"✓ Generador activado en puerto {port_id}\n")
                 
             else:
-                print(f"\n⚙️  Desactivando generador en puerto {port_id}...")
+                print(f"\n  Desactivando generador en puerto {port_id}...")
                 
                 # Desactivar generador
                 port.delete_rx_gen_common_counter(target=0)
@@ -238,7 +233,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 # Volver multiplexores a modo normal
                 port.set_rx_mac_mux()  # RX desde red física
                 
-                print(f"✓ Generador desactivado en puerto {port_id}\n")
+                print(f" Generador desactivado en puerto {port_id}\n")
                 
         except Exception as e:
             raise RuntimeError(
@@ -278,7 +273,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         try:
             # Configurar RX MUX
             if rx_mux is not None:
-                print(f"⚙️  Puerto {port_id} - RX MUX: {rx_mux}")
+                print(f" Puerto {port_id} - RX MUX: {rx_mux}")
                 
                 if rx_mux == "null":
                     port.set_rx_null_mux()
@@ -296,7 +291,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             
             # Configurar TX MUX
             if tx_mux is not None:
-                print(f"⚙️  Puerto {port_id} - TX MUX: {tx_mux}")
+                print(f"  Puerto {port_id} - TX MUX: {tx_mux}")
                 
                 if tx_mux == "null":
                     port.set_tx_null_mux()
@@ -308,7 +303,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                         f"Valores válidos: 'null', 'mac'"
                     )
                 
-                print(f"✓ TX MUX configurado\n")
+                print(f" TX MUX configurado\n")
                 
         except Exception as e:
             raise RuntimeError(
