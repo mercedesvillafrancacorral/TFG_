@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import threading
 from typing import Optional
 
 # Añadir software/ al path para que traffic_generator.py pueda importar control_methods
@@ -51,7 +52,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self.interface = None
         self.node = None
         self.traffic_generator = None
-        
+        self._lock = threading.Lock()
+
         self._connect()
     
     def _connect(self):
@@ -149,18 +151,19 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             )
         
         port = self.traffic_generator.port_dict[port_id]
-        
+
         try:
-            return PortCounters(
-                rx_port_in_frames=port.get_rx_port_in_frame_counter(),
-                rx_port_out_frames=port.get_rx_port_out_frame_counter(),
-                rx_port_gen_frames=port.get_rx_port_gen_frame_counter(),
-                rx_port_in_true_frames=port.get_rx_port_in_true_frame_counter(),
-                rx_port_gen_true_frames=port.get_rx_port_gen_true_frame_counter(),
-                tx_port_in_frames=port.get_tx_port_in_frame_counter(),
-                tx_port_out_frames=port.get_tx_port_out_frame_counter(),
-                tx_port_in_true_frames=port.get_tx_port_in_true_frame_counter(),
-            )
+            with self._lock:
+                return PortCounters(
+                    rx_port_in_frames=port.get_rx_port_in_frame_counter(),
+                    rx_port_out_frames=port.get_rx_port_out_frame_counter(),
+                    rx_port_gen_frames=port.get_rx_port_gen_frame_counter(),
+                    rx_port_in_true_frames=port.get_rx_port_in_true_frame_counter(),
+                    rx_port_gen_true_frames=port.get_rx_port_gen_true_frame_counter(),
+                    tx_port_in_frames=port.get_tx_port_in_frame_counter(),
+                    tx_port_out_frames=port.get_tx_port_out_frame_counter(),
+                    tx_port_in_true_frames=port.get_tx_port_in_true_frame_counter(),
+                )
         except Exception as e:
             raise RuntimeError(
                 f"Error al leer contadores del puerto {port_id}: {e}"
@@ -199,42 +202,35 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             )
         
         port = self.traffic_generator.port_dict[port_id]
-        
+
         try:
-            if enabled:
-                print(f"\n  Activando generador en puerto {port_id}:")
-                print(f"   Frame length: {length} bytes")
-                print(f"   Counter: {counter}")
-                print(f"   Counter frac: {counter_frac}")
-                
-                # Configurar multiplexores para usar generador
-                port.set_rx_gen_mux()  # RX desde generador
-                port.set_tx_mac_mux()  # TX hacia red física
-                
-                # Activar generador (target=0 = primer generador)
-                port.create_rx_gen_basic_counter(
-                    target=0,
-                    counter=counter,
-                    counter_frac=counter_frac,
-                    length=length,
-                    destination_mac_address=0x001122334455,
-                    source_mac_address=0xAABBCCDDEEFF,
-                    ether_type=0x0800
-                )
-                
-                print(f"✓ Generador activado en puerto {port_id}\n")
-                
-            else:
-                print(f"\n  Desactivando generador en puerto {port_id}...")
-                
-                # Desactivar generador
-                port.delete_rx_gen_common_counter(target=0)
-                
-                # Volver multiplexores a modo normal
-                port.set_rx_mac_mux()  # RX desde red física
-                
-                print(f" Generador desactivado en puerto {port_id}\n")
-                
+            with self._lock:
+                if enabled:
+                    print(f"\n  Activando generador en puerto {port_id}:")
+                    print(f"   Frame length: {length} bytes")
+                    print(f"   Counter: {counter}")
+                    print(f"   Counter frac: {counter_frac}")
+
+                    port.set_rx_gen_mux()
+                    port.set_tx_mac_mux()
+
+                    port.create_rx_gen_basic_counter(
+                        target=0,
+                        counter=counter,
+                        counter_frac=counter_frac,
+                        length=length,
+                        destination_mac_address=0x001122334455,
+                        source_mac_address=0xAABBCCDDEEFF,
+                        ether_type=0x0800
+                    )
+                    print(f"✓ Generador activado en puerto {port_id}\n")
+
+                else:
+                    print(f"\n  Desactivando generador en puerto {port_id}...")
+                    port.delete_rx_gen_common_counter(target=0)
+                    port.set_rx_mac_mux()
+                    print(f"✓ Generador desactivado en puerto {port_id}\n")
+
         except Exception as e:
             raise RuntimeError(
                 f"Error al configurar generador en puerto {port_id}: {e}"
@@ -269,42 +265,37 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             )
         
         port = self.traffic_generator.port_dict[port_id]
-        
+
         try:
-            # Configurar RX MUX
-            if rx_mux is not None:
-                print(f" Puerto {port_id} - RX MUX: {rx_mux}")
-                
-                if rx_mux == "null":
-                    port.set_rx_null_mux()
-                elif rx_mux == "mac":
-                    port.set_rx_mac_mux()
-                elif rx_mux == "gen":
-                    port.set_rx_gen_mux()
-                else:
-                    raise ValueError(
-                        f"rx_mux inválido: '{rx_mux}'. "
-                        f"Valores válidos: 'null', 'mac', 'gen'"
-                    )
-                
-                print(f"✓ RX MUX configurado\n")
-            
-            # Configurar TX MUX
-            if tx_mux is not None:
-                print(f"  Puerto {port_id} - TX MUX: {tx_mux}")
-                
-                if tx_mux == "null":
-                    port.set_tx_null_mux()
-                elif tx_mux == "mac":
-                    port.set_tx_mac_mux()
-                else:
-                    raise ValueError(
-                        f"tx_mux inválido: '{tx_mux}'. "
-                        f"Valores válidos: 'null', 'mac'"
-                    )
-                
-                print(f" TX MUX configurado\n")
-                
+            with self._lock:
+                if rx_mux is not None:
+                    print(f"  Puerto {port_id} - RX MUX: {rx_mux}")
+                    if rx_mux == "null":
+                        port.set_rx_null_mux()
+                    elif rx_mux == "mac":
+                        port.set_rx_mac_mux()
+                    elif rx_mux == "gen":
+                        port.set_rx_gen_mux()
+                    else:
+                        raise ValueError(
+                            f"rx_mux inválido: '{rx_mux}'. "
+                            f"Valores válidos: 'null', 'mac', 'gen'"
+                        )
+                    print(f"✓ RX MUX configurado\n")
+
+                if tx_mux is not None:
+                    print(f"  Puerto {port_id} - TX MUX: {tx_mux}")
+                    if tx_mux == "null":
+                        port.set_tx_null_mux()
+                    elif tx_mux == "mac":
+                        port.set_tx_mac_mux()
+                    else:
+                        raise ValueError(
+                            f"tx_mux inválido: '{tx_mux}'. "
+                            f"Valores válidos: 'null', 'mac'"
+                        )
+                    print(f"✓ TX MUX configurado\n")
+
         except Exception as e:
             raise RuntimeError(
                 f"Error al configurar multiplexores del puerto {port_id}: {e}"
