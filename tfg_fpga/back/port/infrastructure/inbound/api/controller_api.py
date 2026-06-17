@@ -147,10 +147,10 @@ def configure_mux(
 #             },
 #             "last_indexed": None,
 #         }
-@router.post ("/reset_fpga")
+@router.post("/reset_fpga")
 def reset_fpga():
     script = os.path.join(FPGA_DIR, "program.sh")
-    bit= os.path.join(FPGA_DIR, "fpga.bit")
+    bit = os.path.join(FPGA_DIR, "fpga.bit")
     try:
         result = subprocess.run(
             ["bash", script, bit],
@@ -161,7 +161,16 @@ def reset_fpga():
         )
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail="Error al programar la FPGA")
+
+        if os.getenv("MODE", "simulation").lower() == "real":
+            import time
+            from back.port.infrastructure.inbound.api.dependencies import hardware
+            time.sleep(5)
+            hardware._connect()
+
         return MessageResponse(message="FPGA reseteada correctamente")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
