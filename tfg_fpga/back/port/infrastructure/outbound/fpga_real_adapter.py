@@ -56,6 +56,18 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
 
         self._connect()
     
+    def reconnect(self):
+        """Cierra la conexión actual y reconecta. Seguro para llamar con el data_collector activo."""
+        with self._lock:
+            try:
+                self.interface.serial_port.close()
+            except Exception:
+                pass
+            self.interface = None
+            self.node = None
+            self.traffic_generator = None
+            self._connect()
+
     def _connect(self):
         """Establece conexión con la FPGA vía XFCP/UART"""
         try:

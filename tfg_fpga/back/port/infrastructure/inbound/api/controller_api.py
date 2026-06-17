@@ -166,7 +166,7 @@ def reset_fpga():
             import time
             from back.port.infrastructure.inbound.api.dependencies import hardware
             time.sleep(5)
-            hardware._connect()
+            hardware.reconnect()
 
         return MessageResponse(message="FPGA reseteada correctamente")
     except HTTPException:
