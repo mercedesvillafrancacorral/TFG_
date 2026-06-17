@@ -129,14 +129,14 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
     def get_ports(self) -> list[int]:
         """
         Retorna lista de IDs de puertos disponibles.
-        
+
         Returns:
             Lista de IDs (ej: [0, 1, 2, 3])
         """
-        if not self.traffic_generator:
-            raise RuntimeError("TrafficGenerator no inicializado")
-        
-        return list(self.traffic_generator.port_dict.keys())
+        with self._lock:
+            if not self.traffic_generator:
+                raise RuntimeError("TrafficGenerator no inicializado")
+            return list(self.traffic_generator.port_dict.keys())
     
     def read_counters(self, port_id: int) -> PortCounters:
         """
