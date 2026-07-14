@@ -55,8 +55,6 @@ class PortCountersService:
             raise ValueError("length debe ser mayor que 0")
         if counter <= 0:
             raise ValueError("counter debe ser mayor que 0")
-        if target < 0 or target >= 10:
-            raise ValueError("Solo hay 10 generadores disponibles por puerto, target debe ser un número entre 0 y 9.")
 
         self.hardware.set_generator_traffic(
             port_id=port_id,
