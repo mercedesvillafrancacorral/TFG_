@@ -25,6 +25,7 @@ class PortCountersService:
         length: int,
         counter: int,
         counter_frac: int
+        
     ) -> None:
         self._validate_port_id(port_id)
         if length <= 0:
@@ -39,7 +40,32 @@ class PortCountersService:
             counter=counter,
             counter_frac=counter_frac,
         )
+    def configure_generator_traffic(
+        self,
+        port_id: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        target: int,
+        
+    ) -> None:
+        self._validate_port_id(port_id)
+        if length <= 0:
+            raise ValueError("length debe ser mayor que 0")
+        if counter <= 0:
+            raise ValueError("counter debe ser mayor que 0")
+        if target < 0 or target >= 10:
+            raise ValueError("Solo hay 10 generadores disponibles por puerto, target debe ser un número entre 0 y 9.")
 
+        self.hardware.set_generator_traffic(
+            port_id=port_id,
+            enabled=enabled,
+            length=length,
+            counter=counter,
+            counter_frac=counter_frac,
+            target=target
+        )
     def configure_mux(self, port_id: int, rx_mux: str | None = None, tx_mux: str | None = None) -> None:
         self._validate_port_id(port_id)
         allowed_rx = {"null", "mac", "gen"}

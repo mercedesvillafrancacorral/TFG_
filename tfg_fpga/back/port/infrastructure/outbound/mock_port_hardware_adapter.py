@@ -58,6 +58,27 @@ class PortHardwareAdapter(IPortHardware):
         else:
             port.delete_rx_gen_common_counter()
 
+    def set_generator_traffic(
+        self,
+        port_id: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        target: int,
+    ) -> None:
+        port = self.ports[port_id]
+
+        if enabled:
+            port.create_rx_gen_common_counter(
+                target=target,
+                counter=counter,
+                counter_frac=counter_frac,
+                length=length,
+            )
+        else:
+            port.delete_rx_gen_common_counter(target=target)
+
     def set_mux(
         self,
         port_id: int,

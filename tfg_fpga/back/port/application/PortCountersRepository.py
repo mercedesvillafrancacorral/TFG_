@@ -16,3 +16,6 @@ class PortCountersRepository(ABC):
     @abstractmethod
     def get_latest(self, port_id: int):
         pass
+    
+    
+  

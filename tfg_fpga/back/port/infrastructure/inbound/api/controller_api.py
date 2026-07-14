@@ -67,6 +67,29 @@ def configure_generator(
         message=f"Traffic generator {generator_state} for port {port_id}"
     )
 
+@router.post("/{port_id}/generator/{target}", response_model=MessageResponse)
+def configure_generator_traffic(
+    port_id: int,
+    target: int,
+    request: GeneratorConfigRequest,
+    service: PortCountersService = Depends(get_port_service),
+):  
+    
+    try:
+        service.configure_generator_traffic(
+            port_id=port_id,
+            enabled=request.enabled,
+            length=request.length,
+            counter=request.counter,
+            counter_frac=request.counter_frac,
+            target=target,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return MessageResponse(
+        message=f"Traffic generator {generator_state} for port {port_id}"
+    )
 
 @router.post("/{port_id}/mux", response_model=MessageResponse)
 def configure_mux(

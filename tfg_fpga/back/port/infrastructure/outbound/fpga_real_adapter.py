@@ -312,7 +312,43 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             raise RuntimeError(
                 f"Error al configurar multiplexores del puerto {port_id}: {e}"
             )
-    
+    def set_generator_traffic(self,
+        port_id: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        target: int,
+    ) -> None:
+        if not self.traffic_generator:
+            raise RuntimeError("TrafficGenerator no inicializado")
+        if port_id  not in self.traffic_generator.port_dict:
+              available = list(self.traffic_generator.port_dict.keys())
+              raise ValueError(f"Puerto {port_id} no existe. Puertos disponibles: {available}")
+        port = self.traffic_generator.port_dict[port_id]
+
+        if not (0 <= target < port.GEN_TRAFFIC_COMMON_COUNT):
+            raise ValueError(
+                f"target {target} fuera de rango"
+            )
+        try:
+            with self._lock:
+                if enabled:
+                    port.set_rx_gen_mux()
+                    port.set_tx_mac_mux()
+                    port.create_rx_gen_basic_counter(
+                        target=target,
+                        counter=counter,
+                        counter_frac=counter_frac,
+                        length=length,
+                        destination_mac_address=0x001122334455,
+                        source_mac_address=0xAABBCCDDEEFF,
+                        ether_type=0x0800,
+                    )
+                else:
+                    port.delete_rx_gen_common_counter(target=target)
+        except Exception as e:
+            raise RuntimeError(f"Error al configurar el flujo {target} del puerto {port_id}: {e}")
     # ========================================================================
     # MÉTODOS ADICIONALES ÚTILES
     # ========================================================================

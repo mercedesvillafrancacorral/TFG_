@@ -15,6 +15,12 @@ class IPortHardware(ABC):
         self,port_id:int, enabled:bool,length:int, counter:int, counter_frac :int
     )-> None: 
         pass
+
+    @abstractmethod
+    def set_generator_traffic (
+        self,port_id:int, enabled:bool,length:int, counter:int, counter_frac :int, target :int
+    )-> None: 
+        pass
     @abstractmethod
     def set_mux(self,port_id:int, rx_mux:str | None=None,  tx_mux: str | None = None) -> None:
         pass
