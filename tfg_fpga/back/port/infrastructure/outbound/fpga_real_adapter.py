@@ -349,6 +349,20 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                     port.delete_rx_gen_common_counter(target=target)
         except Exception as e:
             raise RuntimeError(f"Error al configurar el flujo {target} del puerto {port_id}: {e}")
+    def get_clk_freq(self, port_id: int) -> float:
+        if not self.traffic_generator:
+            raise RuntimeError("TrafficGenerator no inicializado")
+        if port_id not in self.traffic_generator.port_dict:
+            raise ValueError(f"Puerto {port_id} no existe")
+        return self.clk_freq
+
+    def get_counter_frac_width(self, port_id: int) -> int:
+        if not self.traffic_generator:
+            raise RuntimeError("TrafficGenerator no inicializado")
+        if port_id not in self.traffic_generator.port_dict:
+            raise ValueError(f"Puerto {port_id} no existe")
+        return self.traffic_generator.port_dict[port_id].GEN_COUNTER_FRAC_WIDTH
+
     # ========================================================================
     # MÉTODOS ADICIONALES ÚTILES
     # ========================================================================
@@ -383,43 +397,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             "min_frame_length": port.GEN_MIN_FRAME_LENGTH,
             "read_width": port.READ_WIDTH,
         }
-    
-    def calculate_bandwidth_params(
-        self,
-        port_id: int,
-        target_bandwidth_gbps: float,
-        frame_length: int
-    ) -> tuple[int, int]:
-        """
-        Calcula counter y counter_frac para un ancho de banda objetivo.
-        
-        Args:
-            port_id: ID del puerto
-            target_bandwidth_gbps: Ancho de banda deseado en Gbps (ej: 1.0)
-            frame_length: Longitud del frame en bytes
-        
-        Returns:
-            Tupla (counter, counter_frac)
-        
-        Example:
-            >>> adapter = FPGATrafficGeneratorAdapter()
-            >>> counter, frac = adapter.calculate_bandwidth_params(0, 1.0, 64)
-            >>> adapter.set_generator(0, True, 64, counter, frac)
-        """
-        if port_id not in self.traffic_generator.port_dict:
-            raise ValueError(f"Puerto {port_id} no existe")
-        
-        bandwidth_bps = target_bandwidth_gbps * 1e9
-        
-        counter, counter_frac = self.traffic_generator.get_bandwidth_l2_counters(
-            port=port_id,
-            clk_freq=self.clk_freq,
-            bandwidth=bandwidth_bps,
-            frame_length=frame_length
-        )
-        
-        return counter, counter_frac
-    
+
     def __del__(self):
         """Cleanup al destruir el objeto"""
         if self.interface:

@@ -1,3 +1,4 @@
+import math
 
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.IPortHardware import IPortHardware
@@ -64,6 +65,44 @@ class PortCountersService:
             counter_frac=counter_frac,
             target=target
         )
+    def configure_generator_bandwidth(
+        self,
+        port_id: int,
+        enabled: bool,
+        bandwidth_gbps: float,
+        length: int,
+        target: int,
+    ) -> tuple[int, int]:
+        self._validate_port_id(port_id)
+
+        if length <= 0:
+            raise ValueError("length debe ser mayor que 0")
+
+        if bandwidth_gbps <= 0:
+            raise ValueError("bandwidth_gbps debe ser mayor que 0")
+
+        if not 0 <= target < 10:
+            raise ValueError("target debe ser un número entre 0 y 9")
+
+        clk_freq = self.hardware.get_clk_freq(port_id)
+        frac_width = self.hardware.get_counter_frac_width(port_id)
+        counter, counter_frac = self.calculate_bandwidth_params(
+            clk_freq=clk_freq,
+            bandwidth_gbps=bandwidth_gbps,
+            frame_length=length,
+            frac_width=frac_width,
+        )
+
+        self.hardware.set_generator_traffic(
+            port_id=port_id,
+            enabled=enabled,
+            length=length,
+            counter=counter,
+            counter_frac=counter_frac,
+            target=target,
+        )
+
+        return counter, counter_frac
     def configure_mux(self, port_id: int, rx_mux: str | None = None, tx_mux: str | None = None) -> None:
         self._validate_port_id(port_id)
         allowed_rx = {"null", "mac", "gen"}
@@ -87,3 +126,14 @@ class PortCountersService:
     def get_latest(self, port_id: int):
      self._validate_port_id(port_id)
      return self.repository.get_latest(port_id)
+
+    
+    def calculate_bandwidth_params(
+        self, clk_freq: float, bandwidth_gbps: float, frame_length: int, frac_width: int
+    ) -> tuple[int, int]:
+        bandwidth_bps = bandwidth_gbps * 1e9
+        counter = clk_freq * frame_length * 8 / bandwidth_bps
+        counter_ach = math.ceil(counter)
+        counter_debt = counter_ach - counter
+        counter_frac = math.floor(((2 ** frac_width - 1) / counter) * counter_debt)
+        return counter_ach, counter_frac

@@ -22,5 +22,13 @@ class IPortHardware(ABC):
     )-> None: 
         pass
     @abstractmethod
+    def get_clk_freq(self, port_id: int) -> float:
+        pass
+
+    @abstractmethod
+    def get_counter_frac_width(self, port_id: int) -> int:
+        pass
+
+    @abstractmethod
     def set_mux(self,port_id:int, rx_mux:str | None=None,  tx_mux: str | None = None) -> None:
         pass

@@ -11,6 +11,8 @@ from back.port.infrastructure.inbound.api.model_response import (
     GeneratorConfigRequest,
     MuxConfigRequest,
     MessageResponse,
+    BandwidthRequest,
+    BandwidthResponse,
 )
 
 FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
@@ -90,6 +92,32 @@ def configure_generator_traffic(
     return MessageResponse(
         message=f"Traffic generator {generator_state} for port {port_id}"
     )
+@router.post("/{port_id}/generator/{target}/bandwidth",response_model=BandwidthResponse)
+def configure_generator_bandwidth(
+    port_id: int,
+    target: int,
+    request: BandwidthRequest,
+    service: PortCountersService = Depends(get_port_service)
+):
+
+    try :
+        counter,counter_frac = service.configure_generator_bandwidth( port_id, enabled=request.enabled, length=request.length,bandwidth_gbps=request.bandwidth_gbps, target=target,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return BandwidthResponse(
+        message=f"Flow {target} {generator_state} for port {port_id} @ {request.bandwidth_gbps} Gbps",
+        counter=counter,
+        counter_frac=counter_frac,
+    )    
+
+@router.get("/traffic_port_generators/{port_id}")
+def get_traffic_port_generator (port_id: int, service: PortCountersService = Depends(get_port_service),)
+try:
+    return( return {"port_id": port_id, "generators": service.get_generators(port_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)))
 
 @router.post("/{port_id}/mux", response_model=MessageResponse)
 def configure_mux(
