@@ -20,23 +20,45 @@ class PortCountersService:
     def get_counters(self, port_id: int) -> PortCounters:
         self._validate_port_id(port_id)
         counters = self.hardware.read_counters(port_id)
-        throughput= self.calculate_throughput(port_id, counters)
-        self.repository.save(port_id, counters, info=throughput)
-        return counters
-    def calculate_throughput (self, port_id: int, counters: PortCounters) -> dict:
-        date= datetime.utcnow()
-        throughput={}
+
         last_reading = self.last_reading.get(port_id)
-        if last_reading is not None :
-            prev_time, prev_counters = last_reading
-            total_time=(date - prev_time).total_seconds()
-            if total_time > 0:
-                throughput["rx_port_gen_fps"] = max(0, (counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames) / total_time)
-                throughput["tx_port_out_fps"] = max(0, (counters.tx_port_out_frames - prev_counters.tx_port_out_frames) / total_time)
+        date = datetime.utcnow()
         self.last_reading[port_id] = (date, counters)
-        self.throughput[port_id] = throughput
-        return throughput
+
+        metrics = {}
+        if last_reading is not None:
+            prev_time, prev_counters = last_reading
+            total_time = (date - prev_time).total_seconds()
+            if total_time > 0:
+                metrics.update(self.calculate_throughput(counters, prev_counters, total_time))
+                metrics.update(self.calculate_packet_loss_rate(counters, prev_counters))
+                metrics.update(self.calculate_frame_error_rate(counters, prev_counters))
+
+        self.throughput[port_id] = metrics
+        self.repository.save(port_id, counters, info=metrics)
+        return counters
+
+    def calculate_throughput (self, counters: PortCounters, prev_counters: PortCounters, total_time: float) -> dict:
+        rx_gen_fps = max(0, (counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames) / total_time)
+        tx_out_fps = max(0, (counters.tx_port_out_frames - prev_counters.tx_port_out_frames) / total_time)
+        return {"rx_port_gen_fps": rx_gen_fps, "tx_port_out_fps": tx_out_fps}
     
+    def calculate_packet_loss_rate(self, counters: PortCounters,  prev_counters: PortCounters) -> dict:
+        delta_gen = counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames
+        delta_tx_out = counters.tx_port_out_frames - prev_counters.tx_port_out_frames
+        if delta_gen <= 0:
+            return {}
+        
+        packet_loss_rate = max(0, (delta_gen - delta_tx_out) / delta_gen * 100)
+        return {"packet_loss_rate": packet_loss_rate}
+
+    def calculate_frame_error_rate (self, counters: PortCounters, prev_counters: PortCounters) -> dict:
+        delta_gen = counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames
+        delta_gen_true = counters.rx_port_gen_true_frames - prev_counters.rx_port_gen_true_frames
+        if delta_gen <= 0:
+            return {}
+        frame_error_rate = max(0, (delta_gen - delta_gen_true) / delta_gen * 100)
+        return {"frame_error_rate": frame_error_rate}
     def get_throughput(self, port_id: int) -> dict:
         self._validate_port_id(port_id)
         return self.throughput.get(port_id, {})
