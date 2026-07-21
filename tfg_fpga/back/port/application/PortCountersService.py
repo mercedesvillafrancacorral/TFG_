@@ -9,6 +9,7 @@ class PortCountersService:
     def __init__(self,hardware :IPortHardware, repository: PortCountersRepository):
         self.hardware=hardware
         self.repository = repository
+        self._generators: dict[int, dict[int, dict]] ={}
     
     def get_ports(self)->list[int]:
         return self.hardware.get_ports()
@@ -41,6 +42,8 @@ class PortCountersService:
             counter=counter,
             counter_frac=counter_frac,
         )
+        self._follow_generator(port_id, target=0, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac)
+
     def configure_generator_traffic(
         self,
         port_id: int,
@@ -65,6 +68,7 @@ class PortCountersService:
             counter_frac=counter_frac,
             target=target
         )
+        self._follow_generator(port_id, target=target, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac)
     def configure_generator_bandwidth(
         self,
         port_id: int,
@@ -101,6 +105,7 @@ class PortCountersService:
             counter_frac=counter_frac,
             target=target,
         )
+        self._follow_generator(port_id, target=target, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac, bandwidth_gbps=bandwidth_gbps)
 
         return counter, counter_frac
     def configure_mux(self, port_id: int, rx_mux: str | None = None, tx_mux: str | None = None) -> None:
@@ -118,6 +123,27 @@ class PortCountersService:
     def _validate_port_id(self, port_id: int) -> None:
         if port_id not in self.hardware.get_ports():
             raise ValueError(f"Puerto no válido: {port_id}")
+
+    def _follow_generator(
+        self,
+        port_id: int,
+        target: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        bandwidth_gbps: float | None = None,
+    ) -> None:
+        port_generators = self._generators.setdefault(port_id, {})
+        if enabled:
+            entry = {"target": target, "length": length, "counter": counter, "counter_frac": counter_frac}
+            if bandwidth_gbps is not None:
+                entry["bandwidth_gbps"] = bandwidth_gbps
+            port_generators[target] = entry
+        else:
+            port_generators.pop(target, None)
+                   
+    
         
     def get_history(self, port_id: int, limit: int = 100):
      self._validate_port_id(port_id)
@@ -137,3 +163,10 @@ class PortCountersService:
         counter_debt = counter_ach - counter
         counter_frac = math.floor(((2 ** frac_width - 1) / counter) * counter_debt)
         return counter_ach, counter_frac
+    
+    def get_generator_info(
+        self,
+        port_id: int
+    ) -> list [dict]:
+        self._validate_port_id(port_id)
+        return list(self._generators.get(port_id, {}).values())

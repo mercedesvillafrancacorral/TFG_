@@ -112,12 +112,12 @@ def configure_generator_bandwidth(
         counter_frac=counter_frac,
     )    
 
-#@router.get("/traffic_port_generators/{port_id}")
-#def get_traffic_port_generator (port_id: int, service: PortCountersService = Depends(get_port_service),)
-#try:
- #   return( return {"port_id": port_id, "generators": service.get_generators(port_id)}
-  #  except ValueError as e:
-   #     raise HTTPException(status_code=400, detail=str(e)))
+@router.get("/traffic_port_generators_info/{port_id}")
+def get_traffic_port_generator (port_id: int, service: PortCountersService = Depends(get_port_service)):
+    try:
+        return{ "port_id": port_id, "generators": service.get_generator_info(port_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{port_id}/mux", response_model=MessageResponse)
 def configure_mux(
