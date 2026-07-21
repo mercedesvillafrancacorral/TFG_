@@ -27,7 +27,7 @@ class ElasticsearchRepository(PortCountersRepository):
             time.sleep(2)
         else:
             print("ERROR :No se pudo conectar a Elasticsearch")
-    def save(self, port_id: int, counters: PortCounters):
+    def save(self, port_id: int, counters: PortCounters, info: dict | None = None):
         document = {
             "@timestamp": datetime.utcnow().isoformat() + "Z",
             "port_id": port_id,
@@ -41,6 +41,8 @@ class ElasticsearchRepository(PortCountersRepository):
             "tx_port_in_true_frames": counters.tx_port_in_true_frames,
             
         }
+        if info:
+            document.update(info)
 
         return self.es.index(index=self.index_name, document=document)
 

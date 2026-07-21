@@ -119,6 +119,13 @@ def get_traffic_port_generator (port_id: int, service: PortCountersService = Dep
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/{port_id}/throughput")
+def get_throughput (port_id: int, service: PortCountersService = Depends(get_port_service)):
+    try:
+        return {"port_id": port_id, "throughput": service.get_throughput(port_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
 @router.post("/{port_id}/mux", response_model=MessageResponse)
 def configure_mux(
     port_id: int,

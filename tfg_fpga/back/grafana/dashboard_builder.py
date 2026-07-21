@@ -57,6 +57,10 @@ def build_port_dashboard(port_id: int) -> dict:
         "tx_port_out_frames",
         "tx_port_in_true_frames",
     ])
+    throughput_metrics = _avg_metrics([
+        "rx_port_gen_fps",
+        "tx_port_out_fps",
+    ])
 
     return {
         "uid": f"port-{port_id}",
@@ -69,5 +73,11 @@ def build_port_dashboard(port_id: int) -> dict:
         "panels": [
             _timeseries_panel(1, f"Puerto {port_id} — RX Frames", port_id, rx_metrics, 0, 0),
             _timeseries_panel(2, f"Puerto {port_id} — TX Frames", port_id, tx_metrics, 12, 0),
+            _timeseries_panel(3, f"Puerto {port_id} — Throughput (fps)", port_id, throughput_metrics, 0, 8),
         ],
     }
+def _avg_metrics(fields: list) -> list:
+    metrics = []
+    for i, field in enumerate(fields):
+        metrics.append({"type": "avg", "field": field, "id": str(i + 1)})
+    return metrics

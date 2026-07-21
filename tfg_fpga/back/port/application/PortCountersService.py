@@ -1,5 +1,5 @@
 import math
-
+from datetime import datetime
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.IPortHardware import IPortHardware
 from back.port.application.PortCountersRepository import PortCountersRepository
@@ -10,6 +10,9 @@ class PortCountersService:
         self.hardware=hardware
         self.repository = repository
         self._generators: dict[int, dict[int, dict]] ={}
+        self.last_reading: dict[int,tuple]={}
+        self.throughput: dict[int, dict] = {}
+
     
     def get_ports(self)->list[int]:
         return self.hardware.get_ports()
@@ -17,8 +20,27 @@ class PortCountersService:
     def get_counters(self, port_id: int) -> PortCounters:
         self._validate_port_id(port_id)
         counters = self.hardware.read_counters(port_id)
-        self.repository.save(port_id, counters)
+        throughput= self.calculate_throughput(port_id, counters)
+        self.repository.save(port_id, counters, info=throughput)
         return counters
+    def calculate_throughput (self, port_id: int, counters: PortCounters) -> dict:
+        date= datetime.utcnow()
+        throughput={}
+        last_reading = self.last_reading.get(port_id)
+        if last_reading is not None :
+            prev_time, prev_counters = last_reading
+            total_time=(date - prev_time).total_seconds()
+            if total_time > 0:
+                throughput["rx_port_gen_fps"] = max(0, (counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames) / total_time)
+                throughput["tx_port_out_fps"] = max(0, (counters.tx_port_out_frames - prev_counters.tx_port_out_frames) / total_time)
+        self.last_reading[port_id] = (date, counters)
+        self.throughput[port_id] = throughput
+        return throughput
+    
+    def get_throughput(self, port_id: int) -> dict:
+        self._validate_port_id(port_id)
+        return self.throughput.get(port_id, {})
+    
 
     def configure_generator(
         self,

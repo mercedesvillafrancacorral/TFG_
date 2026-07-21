@@ -6,7 +6,7 @@ from back.port.domain.PortCounters import PortCounters
 class PortCountersRepository(ABC):
 
     @abstractmethod
-    def save(self, port_id: int, counters: PortCounters):
+    def save(self, port_id: int, counters: PortCounters, info: dict | None = None):
         pass
 
     @abstractmethod
