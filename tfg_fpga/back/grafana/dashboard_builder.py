@@ -31,7 +31,7 @@ def _timeseries_panel(panel_id: int, title: str, port_id: int, metrics: list, x:
         "targets": [_es_target(port_id, metrics, str(panel_id * 10))],
         "fieldConfig": {
             "defaults": {
-                "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 10},
+                "custom": {"drawStyle": "line", "lineWidth": 1, "fillOpacity": 10,"spanNulls": True},
                 "color": {"mode": "palette-classic"},
             }
         },
