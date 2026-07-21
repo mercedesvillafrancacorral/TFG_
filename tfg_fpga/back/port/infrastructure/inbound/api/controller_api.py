@@ -122,7 +122,7 @@ def get_traffic_port_generator (port_id: int, service: PortCountersService = Dep
 @router.get("/{port_id}/throughput")
 def get_throughput (port_id: int, service: PortCountersService = Depends(get_port_service)):
     try:
-        return {"port_id": port_id, "throughput": service.get_throughput(port_id)}
+        return {"port_id": port_id, "metrics": service.get_throughput(port_id)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     

@@ -59,6 +59,7 @@ class PortCountersService:
             return {}
         frame_error_rate = max(0, (delta_gen - delta_gen_true) / delta_gen * 100)
         return {"frame_error_rate": frame_error_rate}
+    
     def get_throughput(self, port_id: int) -> dict:
         self._validate_port_id(port_id)
         return self.throughput.get(port_id, {})
