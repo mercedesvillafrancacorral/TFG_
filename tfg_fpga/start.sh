@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$SCRIPT_DIR/venv"
-UART_PORT="${UART_PORT:-}"
+UART_PORT="${UART_PORT:-/dev/ttyUSB5}"
 ES_PORT=9200
 GRAFANA_PORT=3000
 KIBANA_PORT=5601
