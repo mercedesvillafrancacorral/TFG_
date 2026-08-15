@@ -55,6 +55,8 @@ run_scenario() {
   local flows=("$@")   # cada elemento "target:length:bw"
 
   echo "=== Escenario: $name ==="
+  local METRICS_FILE
+  METRICS_FILE=$(mktemp)
   local bw_theory_sum=0
   for f in "${flows[@]}"; do
     IFS=: read -r target length bw <<< "$f"
@@ -84,7 +86,8 @@ run_scenario() {
         -v tx_out1="$tx_out1" -v tx_out2="$tx_out2" \
         -v gen1="$gen1" -v gen2="$gen2" \
         -v rx_in1="$rx_in1" -v rx_in2="$rx_in2" \
-        -v rx_true1="$rx_true1" -v rx_true2="$rx_true2" '
+        -v rx_true1="$rx_true1" -v rx_true2="$rx_true2" \
+        -v metrics_file="$METRICS_FILE" '
       BEGIN {
         dt = t2 - t1
         dgen = gen2 - gen1
@@ -93,13 +96,36 @@ run_scenario() {
         drxt = rx_true2 - rx_true1
 
         fps_meas = dgen / dt
-        loss_rate = (dtx > 0) ? (dtx - drx) / dtx * 100 : 0
+        # perdida interna: generado por el port_traffic_gen pero no llega a salir por tx
+        internal_loss = (dgen > 0) ? (dgen - dtx) / dgen * 100 : 0
+        # perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT
+        link_loss = (dtx > 0) ? (dtx - drx) / dtx * 100 : 0
+        # frame error rate: llega a RX_PORT pero no se considera trama valida
         err_rate  = (drx > 0) ? (drx - drxt) / drx * 100 : 0
 
-        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  rx_in_true=%d  fps_meas=%.2f  packet_loss=%.4f%%  frame_error=%.4f%%\n", \
-          rep, dt, dgen, dtx, drx, drxt, fps_meas, loss_rate, err_rate
+        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  rx_in_true=%d  fps_meas=%.2f  internal_loss=%.4f%%  link_loss=%.4f%%  frame_error=%.4f%%\n", \
+          rep, dt, dgen, dtx, drx, drxt, fps_meas, internal_loss, link_loss, err_rate
+
+        print fps_meas, internal_loss, link_loss, err_rate >> metrics_file
       }'
   done
+
+  # resumen estadistico del escenario (media y desviacion tipica de cada metrica)
+  awk '
+    { n++; for (i=1;i<=4;i++) { sum[i]+=$i; sumsq[i]+=$i*$i } }
+    END {
+      if (n==0) { print "  (sin datos)"; exit }
+      names[1]="fps_meas"; names[2]="internal_loss%"; names[3]="link_loss%"; names[4]="frame_error%"
+      printf "  --- resumen (n=%d) ---\n", n
+      for (i=1;i<=4;i++) {
+        mean = sum[i]/n
+        var = (n>1) ? (sumsq[i]/n - mean*mean) * n/(n-1) : 0
+        if (var < 0) var = 0
+        sd = sqrt(var)
+        printf "  %-15s media=%.4f  desv.tip=%.4f\n", names[i], mean, sd
+      }
+    }' "$METRICS_FILE"
+  rm -f "$METRICS_FILE"
   echo
 }
 
