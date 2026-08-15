@@ -8,12 +8,24 @@
 
 set -u
 
-API="http://10.22.10.2:8000"
+# Si se ejecuta directamente en el servidor (switch-dev-1), usar localhost.
+# Si se ejecuta desde fuera via VPN, cambiar a http://10.22.10.2:8000
+API="http://localhost:8000"
 TX_PORT=0     # puerto donde se configuran los flujos (transmite)
 RX_PORT=1     # puerto emparejado por loopback (recibe)
 STABILIZE=2
 WINDOW=10
 REPEATS=5
+
+check_api() {
+  local code
+  code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" "$API/ports")
+  if [ "$code" != "200" ]; then
+    echo "ERROR: no se puede contactar con la API en $API (http_code=$code)." >&2
+    echo "Comprueba que la API esta arrancada (ps aux | grep uvicorn) y que la IP/puerto son correctos." >&2
+    exit 1
+  fi
+}
 
 get_counter() {
   local port=$1 field=$2
@@ -90,6 +102,8 @@ run_scenario() {
 }
 
 # ---- Matriz de escenarios ----
+
+check_api
 
 run_scenario "1-flujo (crosscheck single-flow)" "0:64:1"
 
