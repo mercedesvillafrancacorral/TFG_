@@ -12,7 +12,9 @@ set -u
 # Si se ejecuta desde fuera via VPN, cambiar a http://10.22.10.2:8000
 API="http://localhost:8000"
 TX_PORT=0     # puerto donde se configuran los flujos (transmite)
-RX_PORT=1     # puerto emparejado por loopback (recibe)
+RX_PORT=2     # puerto emparejado por loopback (recibe) -- verificado empiricamente
+              # con port_topology_test.sh el 15/08/2026: topologia real es 0<->2, 1<->3
+              # (NO 0<->1, 2<->3 como indica el apartado 3.6.2 de la memoria)
 STABILIZE=2
 WINDOW=10
 REPEATS=5
