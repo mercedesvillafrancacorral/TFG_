@@ -18,8 +18,10 @@ COLLECTOR_PID=""
 cleanup() {
     info "Deteniendo procesos..."
     [ -n "$COLLECTOR_PID" ] && kill "$COLLECTOR_PID" 2>/dev/null
-    [ -n "$API_PID" ] && sudo kill "$API_PID" 2>/dev/null
-    sudo pkill -f "uvicorn main:app" 2>/dev/null
+    if [ -n "$API_PID" ]; then
+        sudo kill "$API_PID" 2>/dev/null
+        sudo pkill -f "uvicorn main:app" 2>/dev/null
+    fi
 }
 trap cleanup EXIT
 trap 'cleanup; exit 1' INT TERM
@@ -55,6 +57,21 @@ else
         for dev in "$BYID_DIR"/*; do
             [ -e "$dev" ] && CANDIDATES+=("$dev")
         done
+    fi
+    if [ ${#CANDIDATES[@]} -gt 1 ]; then
+        # De los adaptadores serie conectados, la FPGA habla XFCP por la
+        # interfaz if02 del CP2108 (comprobado con dmesg: era el ttyUSB5
+        # que antes estaba hardcodeado). Las demás interfaces del propio
+        # CP2108 y el pod Xilinx (JTAG/depuración) no sirven para esto.
+        FILTERED=()
+        for c in "${CANDIDATES[@]}"; do
+            case "$c" in
+                *CP2108*if02*) FILTERED+=("$c") ;;
+            esac
+        done
+        if [ ${#FILTERED[@]} -eq 1 ]; then
+            CANDIDATES=("${FILTERED[@]}")
+        fi
     fi
      if [ ${#CANDIDATES[@]} -eq 0 ]; then
         for dev in /dev/ttyUSB* /dev/ttyACM*; do
