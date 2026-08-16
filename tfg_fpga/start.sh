@@ -14,6 +14,7 @@ API_PORT=8000
 
 API_PID=""
 COLLECTOR_PID=""
+SIM_MODE=false
 
 cleanup() {
     info "Deteniendo procesos..."
@@ -81,7 +82,8 @@ else
     fi
     
     if [ ${#CANDIDATES[@]} -eq 0 ]; then
-        err "No se ha detectado ningún puerto serie. ¿Está la FPGA conectada y encendida?"
+        info "No se ha detectado ninguna FPGA conectada. Arrancando en modo SIMULACIÓN."
+        SIM_MODE=true
     elif [ ${#CANDIDATES[@]} -eq 1 ]; then
         UART_PORT="${CANDIDATES[0]}"
         ok "FPGA detectada automáticamente en: $UART_PORT"
@@ -90,9 +92,14 @@ else
         for c in "${CANDIDATES[@]}"; do echo "    - $c"; done
         err "Hay más de un dispositivo serie conectado, no se puede elegir automáticamente.\nExporta UART_PORT con el correcto, p.ej.:\n  UART_PORT=${CANDIDATES[0]} bash start.sh"
     fi
-    
+
 fi
-ok "Puerto serie a usar: $UART_PORT"
+
+if [ "$SIM_MODE" = true ]; then
+    ok "Modo: SIMULACIÓN (sin hardware)"
+else
+    ok "Puerto serie a usar: $UART_PORT"
+fi
 
 
 
@@ -182,19 +189,31 @@ else
 fi
 
 # ─── 5. API FastAPI ──────────────────────────────────────────────
-info "Arrancando API FastAPI (MODE=real)..."
 cd "$SCRIPT_DIR"
 
 PYTHON="$VENV/bin/python"
 mkdir -p "$SCRIPT_DIR/logs"
-sudo \
-    MODE=real \
-    UART_PORT="$UART_PORT" \
-    ES_HOST="http://localhost:$ES_PORT" \
-    GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
-    GRAFANA_USER=admin \
-    GRAFANA_PASS=admin \
-     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT & 
+
+if [ "$SIM_MODE" = true ]; then
+    info "Arrancando API FastAPI (MODE=simulation)..."
+    sudo \
+        MODE=simulation \
+        ES_HOST="http://localhost:$ES_PORT" \
+        GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
+        GRAFANA_USER=admin \
+        GRAFANA_PASS=admin \
+        "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
+else
+    info "Arrancando API FastAPI (MODE=real)..."
+    sudo \
+        MODE=real \
+        UART_PORT="$UART_PORT" \
+        ES_HOST="http://localhost:$ES_PORT" \
+        GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
+        GRAFANA_USER=admin \
+        GRAFANA_PASS=admin \
+        "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
+fi
 API_PID=$!
 
 
@@ -216,7 +235,7 @@ API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" \
     > "$SCRIPT_DIR/logs/collector.log" 2>&1 &
 COLLECTOR_PID=$!
 ok "Colector de datos arrancado"
-info "Logs: tail -f $SCRIPT_DIR/logs/api.log   |   tail -f $SCRIPT_DIR/logs/collector.log"
+info "Log del colector: tail -f $SCRIPT_DIR/logs/collector.log"
 
 EXIT_CODE=0
 wait -n "$API_PID" "$COLLECTOR_PID" || EXIT_CODE=$?

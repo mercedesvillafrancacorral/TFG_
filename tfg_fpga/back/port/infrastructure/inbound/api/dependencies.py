@@ -9,7 +9,9 @@ mode = os.getenv("MODE", "simulation").lower()
 
 if mode == "real":
     from back.port.infrastructure.outbound.fpga_real_adapter import FPGATrafficGeneratorAdapter
-    uart_port = os.getenv("UART_PORT", "/dev/ttyUSB2")
+    uart_port = os.getenv("UART_PORT")
+    if not uart_port:
+        raise RuntimeError("MODE=real requiere UART_PORT (arráncalo con start.sh, que lo detecta automáticamente)")
     hardware = FPGATrafficGeneratorAdapter(uart_port=uart_port)
 else:
     # Fase 1: Simulación local — ZCU102=4 puertos, Alveo U200=2 puertos
