@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$SCRIPT_DIR/venv"
-UART_PORT="${UART_PORT:-/dev/ttyUSB5}"
+#UART_PORT="${UART_PORT:-/dev/ttyUSB5}"
 ES_PORT=9200
 GRAFANA_PORT=3000
 KIBANA_PORT=5601
@@ -28,12 +28,40 @@ fi
 source "$VENV/bin/activate"
 pip install -q -r "$SCRIPT_DIR/requirements.txt"
 ok "Entorno virtual listo"
+info " Iniciando búsqueda de la FPGA conectada"
 
-info "Comprobando puerto serie $UART_PORT..."
-if [ ! -e "$UART_PORT" ]; then
-    err "Puerto $UART_PORT no encontrado. ¿Está la FPGA conectada?\nPuertos disponibles: $(ls /dev/ttyUSB* 2>/dev/null || echo 'ninguno')"
+if [  -n "$UART_PORT" ]; then
+    if [ ! -e "$UART_PORT" ]; then
+        err "Puerto $UART_PORT no encontrado. ¿Está la FPGA conectada?\nPuertos disponibles: $(ls /dev/ttyUSB* 2>/dev/null || echo 'ninguno')"
+    fi
+    ok "Puerto serie detectado: $UART_PORT"
+else 
+   BYID_DIR="/dev/serial/by-id"
+   CANDIDATES=()
+    if [ -d "$BYID_DIR" ]; then
+        for dev in "$BYID_DIR"/*; do
+            [ -e "$dev" ] && CANDIDATES+=("$dev")
+        done
+    fi
+     if [ ${#CANDIDATES[@]} -eq 0 ]; then
+        for dev in /dev/ttyUSB* /dev/ttyACM*; do
+            [ -e "$dev" ] && CANDIDATES+=("$dev")
+        done
+    fi
+    if [ ${#CANDIDATES[@]} -eq 0 ]; then
+        err "No se ha detectado ningún puerto serie. ¿Está la FPGA conectada y encendida?"
+    elif [ ${#CANDIDATES[@]} -eq 1 ]; then
+        UART_PORT="${CANDIDATES[0]}"
+        ok "FPGA detectada automáticamente en: $UART_PORT"
+    else
+        info "Se han detectado varios puertos serie:"
+        for c in "${CANDIDATES[@]}"; do echo "    - $c"; done
+        err "Hay más de un dispositivo serie conectado, no se puede elegir automáticamente.\nExporta UART_PORT con el correcto, p.ej.:\n  UART_PORT=${CANDIDATES[0]} bash start.sh"
+    fi
 fi
-ok "Puerto serie detectado: $UART_PORT"
+ok "Puerto serie a usar: $UART_PORT"
+
+
 
 
 
