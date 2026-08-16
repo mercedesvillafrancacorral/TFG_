@@ -194,8 +194,7 @@ sudo \
     GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
-     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT \
-    > "$SCRIPT_DIR/logs/api.log" 2>&1 &
+     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT & 
 API_PID=$!
 
 
