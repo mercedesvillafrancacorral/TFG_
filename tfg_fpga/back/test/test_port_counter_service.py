@@ -23,11 +23,11 @@ class Hardware:
 
     """
 
-     def __init__(self, ports=(0, 1, 2, 3)):
+    def __init__(self, ports=(0, 1, 2, 3)):
         self._ports = list(ports)
         self.calls = []
 
-     def set_generator(self, **kwargs):
+    def set_generator(self, **kwargs):
         self.calls.append(("set_generator", kwargs))  # antes: pass
 
     def get_ports(self):
@@ -57,10 +57,12 @@ class Hardware:
 class Repository(PortCountersRepository):
     """Doble de test para el puerto port_counters_repository.
     """
+    def __init__(self):
+        self.saved = []
 
     def save(self, port_id, counters, info=None):
-        """No-op: no se verifica la persistencia en estos tests."""
-        pass
+        """Registra la lectura en self.saved en vez de escribir en Elasticsearch."""
+        self.saved.append((port_id, counters, info))
 
     def get_history(self, port_id, limit=100):
         """Devuelve siempre una lista vacía."""
