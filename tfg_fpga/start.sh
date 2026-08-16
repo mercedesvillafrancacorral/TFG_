@@ -198,11 +198,7 @@ sudo \
     > "$SCRIPT_DIR/logs/api.log" 2>&1 &
 API_PID=$!
 
-API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" \
-    > "$SCRIPT_DIR/logs/collector.log" 2>&1 &
-COLLECTOR_PID=$!
-ok "Colector de datos arrancado"
-info "Logs: tail -f $SCRIPT_DIR/logs/api.log   |   tail -f $SCRIPT_DIR/logs/collector.log"
+
 # ─── 6. Colector de datos ─────────────────────────────────────────
 info "Esperando a que la API esté lista..."
 for i in $(seq 1 30); do
@@ -217,9 +213,11 @@ for i in $(seq 1 30); do
 done
 
 info "Arrancando colector de datos..."
-API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" &
+API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" \
+    > "$SCRIPT_DIR/logs/collector.log" 2>&1 &
 COLLECTOR_PID=$!
 ok "Colector de datos arrancado"
+info "Logs: tail -f $SCRIPT_DIR/logs/api.log   |   tail -f $SCRIPT_DIR/logs/collector.log"
 
 EXIT_CODE=0
 wait -n "$API_PID" "$COLLECTOR_PID" || EXIT_CODE=$?
