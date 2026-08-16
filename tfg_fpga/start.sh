@@ -186,7 +186,7 @@ info "Arrancando API FastAPI (MODE=real)..."
 cd "$SCRIPT_DIR"
 
 PYTHON="$VENV/bin/python"
-
+mkdir -p "$SCRIPT_DIR/logs"
 sudo \
     MODE=real \
     UART_PORT="$UART_PORT" \
@@ -194,9 +194,15 @@ sudo \
     GRAFANA_URL="http://localhost:$GRAFANA_PORT" \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
-    "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
+     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT \
+    > "$SCRIPT_DIR/logs/api.log" 2>&1 &
 API_PID=$!
 
+API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" \
+    > "$SCRIPT_DIR/logs/collector.log" 2>&1 &
+COLLECTOR_PID=$!
+ok "Colector de datos arrancado"
+info "Logs: tail -f $SCRIPT_DIR/logs/api.log   |   tail -f $SCRIPT_DIR/logs/collector.log"
 # ─── 6. Colector de datos ─────────────────────────────────────────
 info "Esperando a que la API esté lista..."
 for i in $(seq 1 30); do
