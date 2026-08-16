@@ -39,10 +39,10 @@ class Hardware:
         return _counters()
 
 
-     def set_generator_traffic(self, **kwargs):
+    def set_generator_traffic(self, **kwargs):
         self.calls.append(("set_generator_traffic", kwargs))  # antes: pass
 
-     def set_mux(self, **kwargs):
+    def set_mux(self, **kwargs):
         self.calls.append(("set_mux", kwargs))
 
     def get_clk_freq(self, port_id):

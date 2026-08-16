@@ -1,8 +1,6 @@
 #!/bin/bash
 # Descubre empiricamente el emparejamiento fisico (loopback) real entre puertos:
 # genera trafico en un puerto cada vez y mide en que otros puertos se recibe.
-# No asume que el emparejamiento documentado (0<->1, 2<->3) siga siendo correcto.
-#
 # Uso: bash port_topology_test.sh | tee port_topology_results.log
 
 set -u
@@ -79,4 +77,4 @@ for tx in "${PORTS[@]}"; do
   echo
 done
 
-echo "Fin. Revisa arriba que puertos muestran RECIBE trafico para cada emisor."
+echo "Comprobación terminada"
