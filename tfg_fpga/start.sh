@@ -43,11 +43,25 @@ else
             [ -e "$dev" ] && CANDIDATES+=("$dev")
         done
     fi
-     if [ ${#CANDIDATES[@]} -eq 0 ]; then
+    if [ ${#CANDIDATES[@]} -gt 1 ]; then
+    FILTERED=()
+    for c in "${CANDIDATES[@]}"; do
+        case "$c" in
+            *CP2108*if02*) FILTERED+=("$c") ;;
+        esac
+    done
+    if [ ${#FILTERED[@]} -eq 1 ]; then
+        CANDIDATES=("${FILTERED[@]}")
+    fi
+    fi
+    
+    if [ ${#CANDIDATES[@]} -eq 0 ]; then
         for dev in /dev/ttyUSB* /dev/ttyACM*; do
             [ -e "$dev" ] && CANDIDATES+=("$dev")
+    
         done
     fi
+    
     if [ ${#CANDIDATES[@]} -eq 0 ]; then
         err "No se ha detectado ningún puerto serie. ¿Está la FPGA conectada y encendida?"
     elif [ ${#CANDIDATES[@]} -eq 1 ]; then
@@ -58,6 +72,7 @@ else
         for c in "${CANDIDATES[@]}"; do echo "    - $c"; done
         err "Hay más de un dispositivo serie conectado, no se puede elegir automáticamente.\nExporta UART_PORT con el correcto, p.ej.:\n  UART_PORT=${CANDIDATES[0]} bash start.sh"
     fi
+    
 fi
 ok "Puerto serie a usar: $UART_PORT"
 
