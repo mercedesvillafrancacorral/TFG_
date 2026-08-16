@@ -98,7 +98,7 @@ def _counters(rx_gen=0, rx_gen_true=0, tx_out=0, rx_in=0, rx_in_true=0, tx_in=0,
 @pytest.fixture
 def service():
     """PortCountersService construido sobre los dobles de test (sin hardware ni BD reales)."""
-    return PortCountersService(FakeHardware(), DummyRepository())
+    return PortCountersService(Hardware(), Repository())
 
 
 def test_get_ports_returns_hardware_ports(service):
