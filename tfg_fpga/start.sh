@@ -56,19 +56,7 @@ else
             [ -e "$dev" ] && CANDIDATES+=("$dev")
         done
     fi
-    if [ ${#CANDIDATES[@]} -gt 1 ]; then
-    FILTERED=()
-    for c in "${CANDIDATES[@]}"; do
-        case "$c" in
-            *CP2108*if02*) FILTERED+=("$c") ;;
-        esac
-    done
-    if [ ${#FILTERED[@]} -eq 1 ]; then
-        CANDIDATES=("${FILTERED[@]}")
-    fi
-    fi
-
-    if [ ${#CANDIDATES[@]} -eq 0 ]; then
+     if [ ${#CANDIDATES[@]} -eq 0 ]; then
         for dev in /dev/ttyUSB* /dev/ttyACM*; do
             [ -e "$dev" ] && CANDIDATES+=("$dev")
     
