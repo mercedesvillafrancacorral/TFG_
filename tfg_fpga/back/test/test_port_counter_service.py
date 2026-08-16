@@ -23,8 +23,12 @@ class Hardware:
 
     """
 
-    def __init__(self, ports=(0, 1, 2, 3)):
+     def __init__(self, ports=(0, 1, 2, 3)):
         self._ports = list(ports)
+        self.calls = []
+
+     def set_generator(self, **kwargs):
+        self.calls.append(("set_generator", kwargs))  # antes: pass
 
     def get_ports(self):
         """Devuelve los identificadores de puerto configurados."""
@@ -34,17 +38,12 @@ class Hardware:
         """Devuelve una lectura de contadores vacía (todo a cero)."""
         return _counters()
 
-    def set_generator(self, **kwargs):
-        """ no se verifica el efecto sobre el hardware en estos tests."""
-        pass
 
-    def set_generator_traffic(self, **kwargs):
-        """No-op: no se verifica el efecto sobre el hardware en estos tests."""
-        pass
+     def set_generator_traffic(self, **kwargs):
+        self.calls.append(("set_generator_traffic", kwargs))  # antes: pass
 
-    def set_mux(self, **kwargs):
-        """No-op: no se verifica el efecto sobre el hardware en estos tests."""
-        pass
+     def set_mux(self, **kwargs):
+        self.calls.append(("set_mux", kwargs))
 
     def get_clk_freq(self, port_id):
         """Devuelve una frecuencia de reloj fija (156.25 MHz) para los cálculos de ancho de banda."""
@@ -97,12 +96,12 @@ def _counters(rx_gen=0, rx_gen_true=0, tx_out=0, rx_in=0, rx_in_true=0, tx_in=0,
 
 @pytest.fixture
 def service():
-    """PortCountersService construido sobre los dobles de test (sin hardware ni BD reales)."""
+    """PortCountersService construido sobre los dobles de test"""
     return PortCountersService(Hardware(), Repository())
 
 
 def test_get_ports_returns_hardware_ports(service):
-    """get_ports() debe delegar en el hardware y devolver sus puertos tal cual."""
+    """get_ports() debe delegar en el hardware y devolver sus puertos tal cual"""
     assert service.get_ports() == [0, 1, 2, 3]
 
 
@@ -152,3 +151,39 @@ def test_calculate_frame_error_rate_detects_invalid_frames(service):
     curr = _counters(rx_gen=100, rx_gen_true=95)
     result = service.calculate_frame_error_rate(curr, prev)
     assert result["frame_error_rate"] == pytest.approx(5.0)
+
+def test_configure_generator_calls_hardware_when_valid(service):
+    """Con parámetros válidos, configure_generator() debe invocar hardware.set_generator()."""
+    service.configure_generator(0, enabled=True, length=128, counter=10, counter_frac=0)
+    assert ("set_generator", {"port_id": 0, "enabled": True, "length": 128, "counter": 10, "counter_frac": 0}) in service.hardware.calls
+def test_get_counters_persists_reading(service):
+    """get_counters() debe guardar la lectura en el repositorio, no solo devolverla."""
+    service.get_counters(0)
+    assert len(service.repository.saved) == 1
+    saved_port_id, _, _ = service.repository.saved[0]
+    assert saved_port_id == 0
+
+
+def test_calculate_packet_loss_rate_empty_when_no_new_frames(service):
+    """Sin tramas generadas nuevas desde la lectura anterior, no debe calcularse packet_loss_rate."""
+    prev = _counters(rx_gen=100, tx_out=90)
+    curr = _counters(rx_gen=100, tx_out=90)
+    result = service.calculate_packet_loss_rate(curr, prev)
+    assert result == {}
+
+
+def test_calculate_frame_error_rate_empty_when_no_new_frames(service):
+    """Sin tramas generadas nuevas desde la lectura anterior, no debe calcularse frame_error_rate."""
+    prev = _counters(rx_gen=100, rx_gen_true=95)
+    curr = _counters(rx_gen=100, rx_gen_true=95)
+    result = service.calculate_frame_error_rate(curr, prev)
+    assert result == {}
+
+
+def test_calculate_bandwidth_params_returns_positive_counter(service):
+    """Para un ancho de banda objetivo válido, debe devolver un counter positivo y un counter_frac no negativo."""
+    counter, counter_frac = service.calculate_bandwidth_params(
+        clk_freq=156_250_000, bandwidth_gbps=1.0, frame_length=64, frac_width=16
+    )
+    assert counter > 0
+    assert counter_frac >= 0
