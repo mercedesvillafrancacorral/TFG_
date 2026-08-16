@@ -12,6 +12,18 @@ GRAFANA_PORT=3000
 KIBANA_PORT=5601
 API_PORT=8000
 
+API_PID=""
+COLLECTOR_PID=""
+
+cleanup() {
+    info "Deteniendo procesos..."
+    [ -n "$COLLECTOR_PID" ] && kill "$COLLECTOR_PID" 2>/dev/null
+    [ -n "$API_PID" ] && sudo kill "$API_PID" 2>/dev/null
+    sudo pkill -f "uvicorn main:app" 2>/dev/null
+}
+trap cleanup EXIT
+trap 'cleanup; exit 1' INT TERM
+
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 ok()   { echo -e "${GREEN}[OK]${NC} $1"; }
 info() { echo -e "${YELLOW}[..] $1${NC}"; }
@@ -28,7 +40,8 @@ fi
 source "$VENV/bin/activate"
 pip install -q -r "$SCRIPT_DIR/requirements.txt"
 ok "Entorno virtual listo"
-info " Iniciando búsqueda de la FPGA conectada"
+
+info "Detectando si la FPGA se encuentra conectada"
 
 if [  -n "$UART_PORT" ]; then
     if [ ! -e "$UART_PORT" ]; then
@@ -54,7 +67,7 @@ else
         CANDIDATES=("${FILTERED[@]}")
     fi
     fi
-    
+
     if [ ${#CANDIDATES[@]} -eq 0 ]; then
         for dev in /dev/ttyUSB* /dev/ttyACM*; do
             [ -e "$dev" ] && CANDIDATES+=("$dev")
@@ -177,6 +190,7 @@ sudo \
     GRAFANA_USER=admin \
     GRAFANA_PASS=admin \
     "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
+API_PID=$!
 
 # ─── 6. Colector de datos ─────────────────────────────────────────
 info "Esperando a que la API esté lista..."
@@ -193,6 +207,12 @@ done
 
 info "Arrancando colector de datos..."
 API_URL=http://localhost:$API_PORT "$PYTHON" "$SCRIPT_DIR/data_collector.py" &
+COLLECTOR_PID=$!
 ok "Colector de datos arrancado"
 
-wait
+EXIT_CODE=0
+wait -n "$API_PID" "$COLLECTOR_PID" || EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+    err "Un proceso ha terminado inesperadamente (código $EXIT_CODE)"
+fi
+info "Un proceso ha terminado, deteniendo el resto..."
