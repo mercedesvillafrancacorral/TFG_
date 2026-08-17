@@ -21,13 +21,12 @@ class Hardware:
     Simula 4 puertos  con contadores siempre a cero. Los métodos de
     configuración (set_generator, set_generator_traffic, set_mux) son no-op:
     los tests de esta suite verifican la lógica de PortCountersService
-
     """
 
     def __init__(self, ports=(0, 1, 2, 3)):
         self._ports = list(ports)
         self.calls = []
-        self.readings = []
+        self.reading = None
 
     def set_generator(self, **kwargs):
         self.calls.append(("set_generator", kwargs))  # antes: pass
@@ -39,7 +38,7 @@ class Hardware:
     def read_counters(self, port_id):
         """Devuelve una lectura de contadores vacía (todo a cero)."""
         if self.readings:
-            return self.readings.pop(0)
+            return self.reading.pop(0)
         return _counters()
 
 
@@ -188,8 +187,8 @@ def test_calculate_frame_error_rate_empty_when_no_new_frames(service):
     result = service.calculate_frame_error_rate(curr, prev)
     assert result == {}
 
-
-def test_calculate_bandwidth_params_returns_positive_counter(service):
+    
+    def test_calculate_bandwidth_params_returns_positive_counter(service):
     """Para un ancho de banda objetivo válido, debe devolver un counter positivo y un counter_frac no negativo."""
     counter, counter_frac = service.calculate_bandwidth_params(
         clk_freq=156_250_000, bandwidth_gbps=1.0, frame_length=64, frac_width=16
@@ -197,20 +196,18 @@ def test_calculate_bandwidth_params_returns_positive_counter(service):
     assert counter > 0
     assert counter_frac >= 0
 
-def test_configure_mux_invalid_tx_mode (service) :
-    """Comprobación de que configure_mux rechaza un modo TX que no sea ni null ni mac.
+    def test_configure_mux_invalid_tx_mode (service) :
+        "comprobación de que configure_mux rechaza un modo TX que no sea ni null ni mac """
+        "Lo probamos intentando que valide el modo gen "
+        with pytest.raises(ValueError):
+            service.configure_mux (0 , rx_mux=None, tx_mux = "gen")
 
-    Lo probamos intentando que valide el modo gen.
-    """
-    with pytest.raises(ValueError):
-        service.configure_mux (0 , rx_mux=None, tx_mux = "gen")
+    def test_configure_mux_hardware_valid (service) :
+        """Comprobación de que configure_mux delega en la capa de hardware con parámetros válidos"""
+    service.configure_mux(0,rx_mux="gen",tx="mac")
+    assert("set_mux,{"port_id": 0,"rx_mux":"gen","tx_mux":"mac"}) in service.hardware.calls
 
-def test_configure_mux_hardware_valid (service) :
-    """Comprobación de que configure_mux delega en la capa de hardware con parámetros válidos"""
-    service.configure_mux(0, rx_mux="gen", tx_mux="mac")
-    assert ("set_mux", {"port_id": 0, "rx_mux": "gen", "tx_mux": "mac"}) in service.hardware.calls
-
-def test_calcule_throughput_packet_loss_frame_error (service):
+    def test_calcule_throughput_packet_loss_frame_error (service):
     """Se comprueba que con la segunda llamada de un puerto se puedan calcular las métricas"""
     service.hardware.readings = [
         _counters(rx_gen=0, tx_out=0, rx_gen_true=0),
