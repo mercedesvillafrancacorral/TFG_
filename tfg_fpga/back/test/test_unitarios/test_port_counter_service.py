@@ -8,6 +8,7 @@ hilo de auto-tick y estado global no apto para tests deterministas.
 """
 
 import pytest
+import time
 from back.port.application.PortCountersService import PortCountersService
 from back.port.application.PortCountersRepository import PortCountersRepository
 from back.port.domain.PortCounters import PortCounters
@@ -26,6 +27,7 @@ class Hardware:
     def __init__(self, ports=(0, 1, 2, 3)):
         self._ports = list(ports)
         self.calls = []
+        self.readings = []
 
     def set_generator(self, **kwargs):
         self.calls.append(("set_generator", kwargs))  # antes: pass
@@ -36,6 +38,8 @@ class Hardware:
 
     def read_counters(self, port_id):
         """Devuelve una lectura de contadores vacía (todo a cero)."""
+        if self.readings:
+            return self.readings.pop(0)
         return _counters()
 
 
@@ -59,17 +63,20 @@ class Repository(PortCountersRepository):
     """
     def __init__(self):
         self.saved = []
+        self.calls = []
 
     def save(self, port_id, counters, info=None):
         """Registra la lectura en self.saved en vez de escribir en Elasticsearch."""
         self.saved.append((port_id, counters, info))
 
     def get_history(self, port_id, limit=100):
-        """Devuelve siempre una lista vacía."""
+        """Registra la llamada y devuelve siempre una lsita vacía"""
+        self.calls.append(("get_history", port_id, limit))
         return []
 
     def get_latest(self, port_id):
         """Devuelve siempre None (sin lecturas previas)."""
+        self.calls.append(("get_latest", port_id))
         return None
 
 
@@ -189,3 +196,31 @@ def test_calculate_bandwidth_params_returns_positive_counter(service):
     )
     assert counter > 0
     assert counter_frac >= 0
+
+def test_configure_mux_invalid_tx_mode (service) :
+    """Comprobación de que configure_mux rechaza un modo TX que no sea ni null ni mac.
+
+    Lo probamos intentando que valide el modo gen.
+    """
+    with pytest.raises(ValueError):
+        service.configure_mux (0 , rx_mux=None, tx_mux = "gen")
+
+def test_configure_mux_hardware_valid (service) :
+    """Comprobación de que configure_mux delega en la capa de hardware con parámetros válidos"""
+    service.configure_mux(0, rx_mux="gen", tx_mux="mac")
+    assert ("set_mux", {"port_id": 0, "rx_mux": "gen", "tx_mux": "mac"}) in service.hardware.calls
+
+def test_calcule_throughput_packet_loss_frame_error (service):
+    """Se comprueba que con la segunda llamada de un puerto se puedan calcular las métricas"""
+    service.hardware.readings = [
+        _counters(rx_gen=0, tx_out=0, rx_gen_true=0),
+        _counters(rx_gen=100, tx_out=90, rx_gen_true=95),
+    ]
+    service.get_counters(0)
+    time.sleep(0.01)
+    service.get_counters(0)
+
+    metrics = service.get_throughput(0)
+    assert metrics["rx_port_gen_fps"] > 0
+    assert metrics["packet_loss_rate"] == pytest.approx(10.0)
+    assert metrics["frame_error_rate"] == pytest.approx(5.0)
