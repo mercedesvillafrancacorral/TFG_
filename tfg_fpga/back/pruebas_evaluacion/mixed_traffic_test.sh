@@ -51,7 +51,7 @@ run_scenario() {
 
   echo "=== Escenario: $name ==="
   local RAW_CSV="$RESULTS_DIR/${slug}.csv"
-  echo "rep,dt,gen_frames,tx_out,rx_in,gen_true_frames,fps_meas,internal_loss_pct,link_loss_pct,frame_error_pct" > "$RAW_CSV"
+  echo "rep,dt,gen_frames,tx_out,rx_in,gen_true_frames,fps_meas,packet_loss_rate_pct,link_loss_pct,frame_error_rate_pct" > "$RAW_CSV"
 
   local bw_theory_sum=0 fps_theory_sum=0
   for f in "${flows[@]}"; do
@@ -93,18 +93,23 @@ run_scenario() {
         dgen_true = gen_true2 - gen_true1
 
         fps_meas = dgen / dt
-        """perdida interna: generado por el port_traffic_gen pero no llega a salir por tx"""
-        internal_loss = (dgen > 0) ? (dgen - dtx) / dgen * 100 : 0
-        """ perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT"""
+        # packet_loss_rate: misma formula que PortCountersService.calculate_packet_loss_rate
+        # (generado por el port_traffic_gen pero no llega a salir por tx), sin el suelo max(0,...)
+        # de la version de produccion: aqui interesa preservar el signo del ruido de medida
+        # (lectura no atomica de contadores) para no sesgar la media al alza.
+        packet_loss_rate = (dgen > 0) ? (dgen - dtx) / dgen * 100 : 0
+        # link_loss: sin equivalente en PortCountersService (requiere leer dos puertos distintos).
+        # perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT.
         link_loss = (dtx > 0) ? (dtx - drx) / dtx * 100 : 0
-        """ frame error rate: generadas vs validas en propio contador "true" """
-        err_rate  = (dgen > 0) ? (dgen - dgen_true) / dgen * 100 : 0
+        # frame_error_rate: misma formula que PortCountersService.calculate_frame_error_rate,
+        # tambien sin el suelo max(0,...) por el mismo motivo que packet_loss_rate.
+        frame_error_rate = (dgen > 0) ? (dgen - dgen_true) / dgen * 100 : 0
 
-        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  gen_true_frames=%d  fps_meas=%.2f  internal_loss=%.4f%%  link_loss=%.4f%%  frame_error=%.4f%%\n", \
-          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, internal_loss, link_loss, err_rate
+        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  gen_true_frames=%d  fps_meas=%.2f  packet_loss_rate=%.4f%%  link_loss=%.4f%%  frame_error_rate=%.4f%%\n", \
+          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate
 
         printf "%d,%.4f,%d,%d,%d,%d,%.4f,%.4f,%.4f,%.4f\n", \
-          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, internal_loss, link_loss, err_rate >> raw_csv
+          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate >> raw_csv
       }'
   done
 
@@ -121,7 +126,7 @@ run_scenario() {
     }
     END {
       if (n==0) { print "  (sin datos)"; exit }
-      names[1]="fps_meas"; names[2]="internal_loss%"; names[3]="link_loss%"; names[4]="frame_error%"
+      names[1]="fps_meas"; names[2]="packet_loss_rate%"; names[3]="link_loss%"; names[4]="frame_error_rate%"
       printf "  --- resumen (n=%d) ---\n", n
       for (i=1;i<=4;i++) {
         mean[i] = sum[i]/n
