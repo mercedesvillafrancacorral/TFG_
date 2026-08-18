@@ -136,9 +136,21 @@ run_scenario() {
   echo
 }
 
+reset_all_flows() {
+  # asegura estado limpio: deshabilita todos los targets posibles en TX_PORT
+  # por si una ejecucion anterior (interrumpida o de otra sesion) dejo alguno
+  # activo, lo que falsearia el escenario de un unico flujo
+  local t
+  for t in 0 1 2 3; do
+    configure_flow "$t" 64 1 false
+  done
+  sleep "$STABILIZE"
+}
+
 # ---- Matriz de escenarios ----
 
 check_api
+reset_all_flows
 
 run_scenario "1-flujo (crosscheck single-flow)" "1_flujo_crosscheck" "0:64:1"
 
