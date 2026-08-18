@@ -1,9 +1,7 @@
 
 """ Experimento de trafico mixto: valida throughput agregado, packet loss rate y
  frame error rate del generador bajo escenarios con multiples flujos concurrentes
- en el puerto 0, midiendo a traves del enlace fisico loopback puerto0<->puerto2.
-
- Uso: bash mixed_traffic_test.sh | tee mixed_traffic_results.log """
+ en el puerto 0, midiendo a traves del enlace fisico loopback puerto0<->puerto2."""
 
 set -u
 
@@ -22,7 +20,6 @@ check_api() {
   code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" "$API/ports")
   if [ "$code" != "200" ]; then
     echo "ERROR: no se puede contactar con la API en $API (http_code=$code)." >&2
-    echo "Comprueba que la API esta arrancada (ps aux | grep uvicorn) y que la IP/puerto son correctos." >&2
     exit 1
   fi
 }
@@ -40,12 +37,12 @@ configure_flow() {
 }
 
 snapshot() {
-  local tx_out gen rx_in rx_true
+  local tx_out gen rx_in gen_true
   tx_out=$(get_counter "$TX_PORT" "tx_port_out_frames")
   gen=$(get_counter "$TX_PORT" "rx_port_gen_frames")
   rx_in=$(get_counter "$RX_PORT" "rx_port_in_frames")
-  rx_true=$(get_counter "$RX_PORT" "rx_port_in_true_frames")
-  echo "$tx_out $gen $rx_in $rx_true"
+  gen_true=$(get_counter "$TX_PORT" "rx_port_gen_true_frames")
+  echo "$tx_out $gen $rx_in $gen_true"
 }
 
 run_scenario() {
@@ -54,7 +51,7 @@ run_scenario() {
 
   echo "=== Escenario: $name ==="
   local RAW_CSV="$RESULTS_DIR/${slug}.csv"
-  echo "rep,dt,gen_frames,tx_out,rx_in,rx_in_true,fps_meas,internal_loss_pct,link_loss_pct,frame_error_pct" > "$RAW_CSV"
+  echo "rep,dt,gen_frames,tx_out,rx_in,gen_true_frames,fps_meas,internal_loss_pct,link_loss_pct,frame_error_pct" > "$RAW_CSV"
 
   local bw_theory_sum=0 fps_theory_sum=0
   for f in "${flows[@]}"; do
@@ -71,10 +68,10 @@ run_scenario() {
     done
     sleep "$STABILIZE"
 
-    read -r tx_out1 gen1 rx_in1 rx_true1 <<< "$(snapshot)"
+    read -r tx_out1 gen1 rx_in1 gen_true1 <<< "$(snapshot)"
     t1=$(date +%s.%N)
     sleep "$WINDOW"
-    read -r tx_out2 gen2 rx_in2 rx_true2 <<< "$(snapshot)"
+    read -r tx_out2 gen2 rx_in2 gen_true2 <<< "$(snapshot)"
     t2=$(date +%s.%N)
 
     for f in "${flows[@]}"; do
@@ -86,28 +83,28 @@ run_scenario() {
         -v tx_out1="$tx_out1" -v tx_out2="$tx_out2" \
         -v gen1="$gen1" -v gen2="$gen2" \
         -v rx_in1="$rx_in1" -v rx_in2="$rx_in2" \
-        -v rx_true1="$rx_true1" -v rx_true2="$rx_true2" \
+        -v gen_true1="$gen_true1" -v gen_true2="$gen_true2" \
         -v raw_csv="$RAW_CSV" '
       BEGIN {
         dt = t2 - t1
         dgen = gen2 - gen1
         dtx  = tx_out2 - tx_out1
         drx  = rx_in2 - rx_in1
-        drxt = rx_true2 - rx_true1
+        dgen_true = gen_true2 - gen_true1
 
         fps_meas = dgen / dt
-        # perdida interna: generado por el port_traffic_gen pero no llega a salir por tx
+        """perdida interna: generado por el port_traffic_gen pero no llega a salir por tx"""
         internal_loss = (dgen > 0) ? (dgen - dtx) / dgen * 100 : 0
-        # perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT
+        """ perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT"""
         link_loss = (dtx > 0) ? (dtx - drx) / dtx * 100 : 0
-        # frame error rate: llega a RX_PORT pero no se considera trama valida
-        err_rate  = (drx > 0) ? (drx - drxt) / drx * 100 : 0
+        """ frame error rate: generadas vs validas en propio contador "true" """
+        err_rate  = (dgen > 0) ? (dgen - dgen_true) / dgen * 100 : 0
 
-        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  rx_in_true=%d  fps_meas=%.2f  internal_loss=%.4f%%  link_loss=%.4f%%  frame_error=%.4f%%\n", \
-          rep, dt, dgen, dtx, drx, drxt, fps_meas, internal_loss, link_loss, err_rate
+        printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  gen_true_frames=%d  fps_meas=%.2f  internal_loss=%.4f%%  link_loss=%.4f%%  frame_error=%.4f%%\n", \
+          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, internal_loss, link_loss, err_rate
 
         printf "%d,%.4f,%d,%d,%d,%d,%.4f,%.4f,%.4f,%.4f\n", \
-          rep, dt, dgen, dtx, drx, drxt, fps_meas, internal_loss, link_loss, err_rate >> raw_csv
+          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, internal_loss, link_loss, err_rate >> raw_csv
       }'
   done
 
