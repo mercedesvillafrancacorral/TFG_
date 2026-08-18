@@ -1,6 +1,5 @@
-#!/bin/bash
-# Descubre empiricamente el emparejamiento fisico (loopback) real entre puertos:
-# genera trafico en un puerto cada vez y mide en que otros puertos se recibe.
+""" Descubre empiricamente el emparejamiento fisico (loopback) real entre puertos:
+genera trafico en un puerto cada vez y mide en que otros puertos se recibe """
 # Uso: bash port_topology_test.sh | tee port_topology_results.log
 
 set -u
@@ -13,9 +12,27 @@ BW_GBPS=1
 STABILIZE=2
 WINDOW=6
 
+check_api() {
+  local code
+  code=$(curl -s -m 5 -o /dev/null -w "%{http_code}" "$API/ports")
+  if [ "$code" != "200" ]; then
+    echo "ERROR: no se puede contactar con la API en $API (http_code=$code)." >&2
+    exit 1
+  fi
+}
+
 get_counter() {
   local port=$1 field=$2
   curl -s -m 5 "$API/ports/$port/counters" | grep -o "\"$field\":[0-9]*" | grep -o '[0-9]*$'
+}
+
+reset_all_flows() {
+  
+  local p
+  for p in "${PORTS[@]}"; do
+    configure_flow "$p" false
+  done
+  sleep "$STABILIZE"
 }
 
 set_rx_mac() {
@@ -32,6 +49,9 @@ configure_flow() {
     -d "{\"enabled\":$enabled,\"length\":$LENGTH,\"bandwidth_gbps\":$BW_GBPS}" > /dev/null
 }
 
+check_api
+reset_all_flows
+
 echo "Estado inicial de los puertos:"
 curl -s "$API/ports"
 echo
@@ -40,8 +60,6 @@ echo
 for tx in "${PORTS[@]}"; do
   echo "=== Generando trafico en puerto $tx, midiendo recepcion en el resto ==="
 
-  # aseguramos rx en modo mac en todos los demas puertos para no confundir
-  # 'sin conexion fisica' con 'mux en modo null'
   for rx in "${PORTS[@]}"; do
     if [ "$rx" != "$tx" ]; then
       set_rx_mac "$rx"
