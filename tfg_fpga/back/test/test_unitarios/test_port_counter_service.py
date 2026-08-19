@@ -215,14 +215,24 @@ def test_calcule_throughput_packet_loss_frame_error(service):
         _counters(rx_gen=0, tx_out=0, rx_gen_true=0),
         _counters(rx_gen=100, tx_out=90, rx_gen_true=95),
     ]
+    service.get_counters(0)
+    time.sleep(0.01)
+    service.get_counters(0)
 
-def test_calculate_counter_counter/frac_values(service):
-    """Comprueba que no solamente haya valores positivos para counter y counter_frac"""
-    counter,counter_frac = service.calculate_bandwidth_params(
-        clk_freq=156_250_000,bandwidth_gbps=3.0, frame_length=64, frac_width=16
-    ) 
-    assert counter== 27
-    assert counter_frac== 819
+    metrics = service.get_throughput(0)
+    assert metrics["rx_port_gen_fps"] > 0
+    assert metrics["packet_loss_rate"] == pytest.approx(10.0)
+    assert metrics["frame_error_rate"] == pytest.approx(5.0)
+
+
+def test_calculate_bandwidth_params_matches_expected_value(service):
+    """Comprueba el valor exacto de counter/counter_frac para una configuración conocida, no solo que sean positivos."""
+    counter, counter_frac = service.calculate_bandwidth_params(
+        clk_freq=156_250_000, bandwidth_gbps=3.0, frame_length=64, frac_width=16
+    )
+    assert counter == 27
+    assert counter_frac == 819
+
 
 def test_calculate_frame_error_rate_floors_at_zero(service):
     """Si el contador de tramas válidas sube más que el de generadas (ruido de medida), frame_error_rate no debe bajar de 0."""
@@ -232,11 +242,36 @@ def test_calculate_frame_error_rate_floors_at_zero(service):
     assert result["frame_error_rate"] == 0
 
 
-    service.get_counters(0)
-    time.sleep(0.01)
-    service.get_counters(0)
+def test_calculate_packet_loss_rate_floors_at_zero(service):
+    """Si llegan más tramas de las generadas (ruido de medida), packet_loss_rate no debe bajar de 0."""
+    prev = _counters(rx_gen=0, tx_out=0)
+    curr = _counters(rx_gen=100, tx_out=110)
+    result = service.calculate_packet_loss_rate(curr, prev)
+    assert result["packet_loss_rate"] == 0
 
-    metrics = service.get_throughput(0)
-    assert metrics["rx_port_gen_fps"] > 0
-    assert metrics["packet_loss_rate"] == pytest.approx(10.0)
-    assert metrics["frame_error_rate"] == pytest.approx(5.0)
+
+def test_configure_generator_bandwidth_calls_hardware_when_valid(service):
+    """Con parámetros válidos, configure_generator_bandwidth() calcula counter/counter_frac, se los pasa al hardware y los refleja en get_generator_info()."""
+    counter, counter_frac = service.configure_generator_bandwidth(
+        0, enabled=True, bandwidth_gbps=1.0, length=64, target=0
+    )
+    assert counter > 0
+
+    call_name, kwargs = service.hardware.calls[-1]
+    assert call_name == "set_generator_traffic"
+    assert kwargs == {
+        "port_id": 0,
+        "enabled": True,
+        "length": 64,
+        "counter": counter,
+        "counter_frac": counter_frac,
+        "target": 0,
+    }
+
+    assert service.get_generator_info(0) == [{
+        "target": 0,
+        "length": 64,
+        "counter": counter,
+        "counter_frac": counter_frac,
+        "bandwidth_gbps": 1.0,
+    }]
