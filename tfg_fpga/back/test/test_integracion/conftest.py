@@ -14,6 +14,22 @@ sim_elasticsearch = MagicMock()
 sim_elasticsearch.ping.return_value = True
 patch("elasticsearch.Elasticsearch", return_value=sim_elasticsearch).start()
 
+import sys
+import types
+
+_sim_hardware_module = types.ModuleType(
+    "back.port.infrastructure.outbound.mock_port_hardware_adapter"
+)
+
+
+class _DummyPortHardwareAdapter:
+    def __init__(self, port_count=4):
+        pass
+
+
+_sim_hardware_module.PortHardwareAdapter = _DummyPortHardwareAdapter
+sys.modules["back.port.infrastructure.outbound.mock_port_hardware_adapter"] = _sim_hardware_module
+
 from main import app
 from back.port.infrastructure.inbound.api.dependencies import get_port_service
 
