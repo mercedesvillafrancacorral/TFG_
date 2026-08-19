@@ -1,5 +1,10 @@
 """ Test unitarios de GrafanaClient"""
-""" Solo se testea la lógica de construcción de URLs"""
+""" Solo se testea la lógica de construcción de URLs,
+sin tocar los métodos que hacen peticiones HTTP reales (_get/_post/health/...).
+"""
+
+from back.grafana.grafana_client import GrafanaClient
+
 
 def test_external_base_prefers_explicit_env_override(monkeypatch):
     monkeypatch.setattr("back.grafana.grafana_client.GRAFANA_EXTERNAL_URL", "http://mi-dominio.com")
