@@ -215,6 +215,23 @@ def test_calcule_throughput_packet_loss_frame_error(service):
         _counters(rx_gen=0, tx_out=0, rx_gen_true=0),
         _counters(rx_gen=100, tx_out=90, rx_gen_true=95),
     ]
+
+def test_calculate_counter_counter/frac_values(service):
+    """Comprueba que no solamente haya valores positivos para counter y counter_frac"""
+    counter,counter_frac = service.calculate_bandwidth_params(
+        clk_freq=156_250_000,bandwidth_gbps=3.0, frame_length=64, frac_width=16
+    ) 
+    assert counter== 27
+    assert counter_frac== 819
+
+def test_calculate_frame_error_rate_floors_at_zero(service):
+    """Si el contador de tramas válidas sube más que el de generadas (ruido de medida), frame_error_rate no debe bajar de 0."""
+    prev = _counters(rx_gen=0, rx_gen_true=0)
+    curr = _counters(rx_gen=100, rx_gen_true=110)
+    result = service.calculate_frame_error_rate(curr, prev)
+    assert result["frame_error_rate"] == 0
+
+
     service.get_counters(0)
     time.sleep(0.01)
     service.get_counters(0)
