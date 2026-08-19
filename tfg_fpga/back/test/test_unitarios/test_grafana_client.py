@@ -1,6 +1,5 @@
-""" Test unitarios de GrafanaClient"""
-""" Solo se testea la lógica de construcción de URLs,
-sin tocar los métodos que hacen peticiones HTTP reales (_get/_post/health/...).
+"""Tests unitarios de GrafanaClient 
+solo la lógica de construcción de URLs
 """
 
 from back.grafana.grafana_client import GrafanaClient
@@ -22,6 +21,15 @@ def test_external_base_falls_back_to_localhost_without_request_host(monkeypatch)
     monkeypatch.setattr("back.grafana.grafana_client.GRAFANA_EXTERNAL_URL", "")
     client = GrafanaClient(request_host=None)
     assert client._external_base() == "http://localhost:3000"
+
+
+def test_panel_embed_url_includes_dashboard_and_panel(monkeypatch):
+    monkeypatch.setattr("back.grafana.grafana_client.GRAFANA_EXTERNAL_URL", "")
+    client = GrafanaClient(request_host=None)
+    url = client.panel_embed_url("port-0", 3)
+    assert url.startswith("http://localhost:3000/d/port-0")
+    assert "viewPanel=3" in url
+
 
 def test_dashboard_url_includes_uid(monkeypatch):
     monkeypatch.setattr("back.grafana.grafana_client.GRAFANA_EXTERNAL_URL", "")
