@@ -46,6 +46,12 @@ def _max_metrics(fields: list) -> list:
     return metrics
 
 
+def _avg_metrics(fields: list) -> list:
+    metrics = []
+    for i, field in enumerate(fields):
+        metrics.append({"type": "avg", "field": field, "id": str(i + 1)})
+    return metrics
+
 def build_port_dashboard(port_id: int) -> dict:
     rx_metrics = _max_metrics([
         "rx_port_gen_frames",
@@ -61,6 +67,10 @@ def build_port_dashboard(port_id: int) -> dict:
         "rx_port_gen_fps",
         "tx_port_out_fps",
     ])
+    quality_metrics = _avg_metrics([
+        "packet_loss_rate",
+        "frame_error_rate",
+    ])
 
     return {
         "uid": f"port-{port_id}",
@@ -74,10 +84,6 @@ def build_port_dashboard(port_id: int) -> dict:
             _timeseries_panel(1, f"Puerto {port_id} — RX Frames", port_id, rx_metrics, 0, 0),
             _timeseries_panel(2, f"Puerto {port_id} — TX Frames", port_id, tx_metrics, 12, 0),
             _timeseries_panel(3, f"Puerto {port_id} — Throughput (fps)", port_id, throughput_metrics, 0, 8),
+            _timeseries_panel(4, f"Puerto {port_id} — Pérdidas y errores (%)", port_id, quality_metrics, 12, 8),
         ],
     }
-def _avg_metrics(fields: list) -> list:
-    metrics = []
-    for i, field in enumerate(fields):
-        metrics.append({"type": "avg", "field": field, "id": str(i + 1)})
-    return metrics
