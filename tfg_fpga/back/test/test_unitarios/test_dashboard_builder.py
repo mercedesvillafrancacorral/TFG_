@@ -33,16 +33,17 @@ def test_timeseries_panel_has_expected_position_and_title():
     assert panel["gridPos"] == {"x": 0, "y": 8, "h": 8, "w": 12}
     assert panel["type"] == "timeseries"
 
-def test_build_port_dashboard_has_three_panels_for_port():
+def test_build_port_dashboard_has_four_panels_for_port():
     dashboard = build_port_dashboard(3)
     assert dashboard["uid"] == "port-3"
     assert "port-3" in dashboard["tags"]
-    assert len(dashboard["panels"]) == 3
+    assert len(dashboard["panels"]) == 4
     titles = [p["title"] for p in dashboard["panels"]]
     assert titles == [
         "Puerto 3 — RX Frames",
         "Puerto 3 — TX Frames",
         "Puerto 3 — Throughput (fps)",
+        "Puerto 3 — Pérdidas y errores (%)",
     ]
 
 
