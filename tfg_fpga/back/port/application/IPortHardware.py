@@ -1,6 +1,7 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from back.port.domain.PortCounters import PortCounters
-from __future__ import annotations
+
 
 
 class IPortHardware(ABC):
