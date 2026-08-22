@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
 from back.port.domain.PortCounters import PortCounters
+from __future__ import annotations
+
+
 class IPortHardware(ABC):
     @abstractmethod
     def read_counters(self, port_id: int) -> PortCounters:
