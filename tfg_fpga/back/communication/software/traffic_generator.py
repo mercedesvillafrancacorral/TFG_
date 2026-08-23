@@ -233,7 +233,13 @@ class TrafficGenerator():
         if self.port_module_count:
             for i in range(self.port_module_count):
                 port = Port(write_func=self.write_func, read_func=self.read_func, offset=self.port_offset + i*self.port_stride)
-                port.initialize()
+                try:
+                    port.initialize()
+                except Exception as e:
+                    port_id = getattr(port, "PORT_ID", i)
+                    print(f"AVISO: puerto {port_id} no disponible ({e}); probable reconfiguración parcial pendiente de recarga completa")
+                    self.degraded_ports[port_id] = str(e)
+                    continue
                 self.port_dict[port.PORT_ID] = port
                 self.port_module_offset[port.PORT_ID] = self.port_offset + i*self.port_stride
 
