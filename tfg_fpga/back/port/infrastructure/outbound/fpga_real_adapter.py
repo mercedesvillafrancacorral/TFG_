@@ -416,7 +416,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         configuraciones (normal vs. dfx_normal vs. dfx_vlan) para ver si el
         bloque de puertos o el de switch/FCL se desplazaron de direccion.
         """
-        if not self.node:
+        if self.node is None:
             raise RuntimeError("TrafficGenerator no inicializado")
 
         read = self.node.read
