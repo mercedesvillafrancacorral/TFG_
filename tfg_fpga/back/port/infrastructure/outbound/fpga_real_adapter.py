@@ -15,6 +15,17 @@ for _p in (_software_dir, _xfcp_dir):
 
 from xfcp.interface import SerialInterface       # noqa: E402
 from traffic_generator import TrafficGenerator   # noqa: E402
+from control_methods import read_conf_reg_int    # noqa: E402
+from control_registers import (                  # noqa: E402
+    RB_BOARD_REG_PORT_ENABLE_COUNT,
+    RB_BOARD_REG_PORT_25G_COUNT,
+    RB_BOARD_REG_PORT_100G_COUNT,
+    RB_BOARD_REG_PORT_OFFSET,
+    RB_BOARD_REG_PORT_STRIDE,
+    RB_BOARD_REG_SWITCH_COUNT,
+    RB_BOARD_REG_SWITCH_OFFSET,
+    RB_BOARD_REG_SWITCH_STRIDE,
+)
 from back.port.application.IPortHardware import IPortHardware
 from back.port.domain.PortCounters import PortCounters
 
@@ -396,6 +407,28 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             "counter_frac_width": port.GEN_COUNTER_FRAC_WIDTH,
             "min_frame_length": port.GEN_MIN_FRAME_LENGTH,
             "read_width": port.READ_WIDTH,
+        }
+
+    def get_board_registers(self) -> dict:
+        """
+        Diagnostico: registros crudos de nivel de placa (offset 0x0), leidos
+        directamente sin pasar por Port/TrafficGenerator. Compara esto entre
+        configuraciones (normal vs. dfx_normal vs. dfx_vlan) para ver si el
+        bloque de puertos o el de switch/FCL se desplazaron de direccion.
+        """
+        if not self.node:
+            raise RuntimeError("TrafficGenerator no inicializado")
+
+        read = self.node.read
+        return {
+            "port_enable_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_ENABLE_COUNT),
+            "port_25g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_25G_COUNT),
+            "port_100g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_100G_COUNT),
+            "port_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_OFFSET),
+            "port_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_STRIDE),
+            "switch_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_COUNT),
+            "switch_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_OFFSET),
+            "switch_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_STRIDE),
         }
 
     def __del__(self):

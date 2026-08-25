@@ -71,6 +71,20 @@ def get_port_info(port_id: int):
         )
 
 
+@router.get("/board-registers")
+def get_board_registers():
+    """Diagnóstico: registros crudos de nivel de placa (offset 0x0), sin pasar por
+    Port/TrafficGenerator. Compara esto entre configuraciones para localizar si el
+    bloque de puertos o el de switch/FCL se desplazaron de dirección."""
+    try:
+        return hardware.get_board_registers()
+    except AttributeError:
+        raise HTTPException(
+            status_code=501,
+            detail="get_board_registers no está disponible para el adaptador de hardware actual",
+        )
+
+
 @router.post("/{port_id}/generator", response_model=MessageResponse)
 def configure_generator(
     port_id: int,
