@@ -50,10 +50,26 @@ def get_counters(port_id: int, service: PortCountersService = Depends(get_port_s
             tx_port_in_frames=counters.tx_port_in_frames,
             tx_port_out_frames=counters.tx_port_out_frames,
             tx_port_in_true_frames=counters.tx_port_in_true_frames,
-        
+
         )
-    
-    
+
+
+
+@router.get("/{port_id}/info")
+def get_port_info(port_id: int):
+    """Diagnóstico: parámetros constantes leídos del puerto (rate, anchos de contador, etc.)
+    tal y como quedaron cacheados en el último connect/reconnect. Útil para comparar el
+    mapa de registros entre configuraciones (p.ej. normal vs. dfx_vlan)."""
+    try:
+        return hardware.get_port_info(port_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except AttributeError:
+        raise HTTPException(
+            status_code=501,
+            detail="get_port_info no está disponible para el adaptador de hardware actual",
+        )
+
 
 @router.post("/{port_id}/generator", response_model=MessageResponse)
 def configure_generator(
