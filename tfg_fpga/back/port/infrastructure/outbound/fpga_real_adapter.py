@@ -420,16 +420,17 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             raise RuntimeError("TrafficGenerator no inicializado")
 
         read = self.node.read
-        return {
-            "port_enable_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_ENABLE_COUNT),
-            "port_25g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_25G_COUNT),
-            "port_100g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_100G_COUNT),
-            "port_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_OFFSET),
-            "port_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_STRIDE),
-            "switch_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_COUNT),
-            "switch_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_OFFSET),
-            "switch_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_STRIDE),
-        }
+        with self._lock:
+            return {
+                "port_enable_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_ENABLE_COUNT),
+                "port_25g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_25G_COUNT),
+                "port_100g_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_100G_COUNT),
+                "port_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_OFFSET),
+                "port_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_PORT_STRIDE),
+                "switch_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_COUNT),
+                "switch_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_OFFSET),
+                "switch_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_STRIDE),
+            }
 
     def __del__(self):
         """Cleanup al destruir el objeto"""
