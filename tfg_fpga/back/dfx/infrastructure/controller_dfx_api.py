@@ -23,7 +23,7 @@ def load_config(name: str, service: FpgaDfxConfigService = Depends(get_fpga_dfx_
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    message =  f"Configuration '{name}' loaded successfully"
+    "message": f"Configurations found: {', '.join(configs)}",
     if not link_ready:
         message += (
             ". The FPGA was reprogrammed successfully, but the connection to the "
