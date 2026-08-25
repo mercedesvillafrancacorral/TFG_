@@ -1,8 +1,10 @@
 import math
+import time
 from datetime import datetime
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.IPortHardware import IPortHardware
 from back.port.application.PortCountersRepository import PortCountersRepository
+
 
 class PortCountersService:
 
@@ -215,3 +217,18 @@ class PortCountersService:
     ) -> list [dict]:
         self._validate_port_id(port_id)
         return list(self._generators.get(port_id, {}).values())
+    
+
+    
+    def wait_for_retry_connection(self, attempts: int = 6, delay: float = 2.0) -> bool:
+        ports = self.get_ports()
+        if not ports:
+            return True
+        probe_port = ports[0]
+        for _ in range(attempts):
+            try:
+                self.get_counters(probe_port)
+                return True
+            except Exception:
+                time.sleep(delay)
+        return False

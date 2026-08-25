@@ -233,6 +233,7 @@ class TrafficGenerator():
         if self.port_module_count:
             for i in range(self.port_module_count):
                 port = Port(write_func=self.write_func, read_func=self.read_func, offset=self.port_offset + i*self.port_stride)
+
                 try:
                     port.initialize()
                 except Exception as e:

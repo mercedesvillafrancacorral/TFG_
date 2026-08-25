@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime, timedelta
 from typing import Optional
+import time
 import subprocess
 import os
+from back.port.infrastructure.inbound.api.dependencies import hardware
+
 from back.port.application.PortCountersService import PortCountersService
 from back.port.infrastructure.inbound.api.dependencies import get_port_service
 from back.port.infrastructure.inbound.api.model_response import (
@@ -206,7 +209,7 @@ def configure_mux(
 #             "last_indexed": None,
 #         }
 @router.post("/reset_fpga")
-def reset_fpga():
+def reset_fpga(service: PortCountersService = Depends(get_port_service)):
     script = os.path.join(FPGA_DIR, "program.sh")
     bit = os.path.join(FPGA_DIR, "fpga.bit")
     try:
@@ -220,15 +223,21 @@ def reset_fpga():
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail="Error al programar la FPGA")
 
+        link_ready = True
         if os.getenv("MODE", "simulation").lower() == "real":
-            import time
-            from back.port.infrastructure.inbound.api.dependencies import hardware
-            time.sleep(5)
+            time.sleep(6)
             hardware.reconnect()
+            link_ready = service.wait_for_retry_connection()
 
-        return MessageResponse(message="FPGA reseteada correctamente")
+        message = "FPGA reseteada correctamente"
+        if not link_ready:
+            message += (
+                ". La FPGA se ha reprogramado correctamente, pero la conexión con "
+                "los puertos todavía no se ha estabilizado — reintenta en unos segundos."
+            )
+
+        return MessageResponse(message=message)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
