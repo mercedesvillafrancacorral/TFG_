@@ -19,6 +19,11 @@ from back.port.infrastructure.inbound.api.model_response import (
 )
 
 FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
+CONFIG_LIBRARY = {
+    "normal": {"bit": "fpga.bit", "dfx": False},
+    "dfx_normal": {"bit": "config1_v2.bit", "dfx": False},
+    "dfx_vlan": {"bit": "config2_v2_partial.bit", "dfx": True},
+}
 
 router = APIRouter(prefix="/ports", tags=["ports"])
 
