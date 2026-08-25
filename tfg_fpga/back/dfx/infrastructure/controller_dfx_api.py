@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from back.dfx.application.fpga_dfx_config_service import FpgaDfxConfigService
 from back.dfx.infrastructure.inbound.dependencies import get_fpga_dfx_config_service
 
-router = APIRouter(prefix="/dfx", tags=["dfx"])
+router = APIRouter(prefix="/dfx", tags=["Reconfiguración dinámica"])
 
 
 @router.get("/configs")
