@@ -7,11 +7,12 @@ router = APIRouter(prefix="/dfx", tags=["Reconfiguración dinámica"])
 
 
 @router.get("/configurations")
-def list_configurations(service:FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
+def list_configurations(service: FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
+    configs = service.list_configs()
     return {
-    "message": f "Configurations found: {', '.join(configs)}",
-    "configs": configs,
-}
+        "message": f"Configurations found: {', '.join(configs)}",
+        "configs": configs,
+    }
 
 
 @router.post("/load_configuration/{name}")
@@ -23,10 +24,10 @@ def load_config(name: str, service: FpgaDfxConfigService = Depends(get_fpga_dfx_
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    "message": f"Configurations found: {', '.join(configs)}",
+    message = f"Configuration '{name}' loaded successfully"
     if not link_ready:
         message += (
             ". The FPGA was reprogrammed successfully, but the connection to the "
-        "ports hasn't stabilized yet — please wait in a few seconds."
+            "ports hasn't stabilized yet — please retry in a few seconds."
         )
     return {"message": message}
