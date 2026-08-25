@@ -1,6 +1,15 @@
 import pytest
 
+from back.dfx.application import fpga_dfx_config_service as fpga_dfx_config_service_module
 from back.dfx.application.fpga_dfx_config_service import FpgaDfxConfigService
+
+
+class Hardware:
+    def __init__(self):
+        self.reconnect_calls = 0
+
+    def reconnect(self):
+        self.reconnect_calls += 1
 
 
 class Programmer:
@@ -62,3 +71,19 @@ def test_load_config_propagates_link_ready_result():
 
     assert service_ready.load_config("normal") is True
     assert service_not_ready.load_config("normal") is False
+
+
+def test_load_config_without_hardware_skips_reconnect():
+    service = FpgaDfxConfigService(Programmer(), CountersService())
+
+    assert service.load_config("dfx_vlan") is True
+
+
+def test_load_config_reconnects_hardware_after_programming(monkeypatch):
+    monkeypatch.setattr(fpga_dfx_config_service_module.time, "sleep", lambda _seconds: None)
+    hardware = Hardware()
+    service = FpgaDfxConfigService(Programmer(), CountersService(), hardware)
+
+    service.load_config("dfx_vlan")
+
+    assert hardware.reconnect_calls == 1
