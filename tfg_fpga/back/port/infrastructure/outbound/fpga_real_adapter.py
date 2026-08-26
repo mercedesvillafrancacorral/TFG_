@@ -39,10 +39,10 @@ from back.port.domain.PortCounters import PortCounters
 class FPGATrafficGeneratorAdapter(IPortHardware):
     """
     Adaptador que conecta tu aplicación FastAPI con la FPGA real.
-    
+
     Usa el TrafficGenerator del tutor e implementa tu interfaz IPortHardware.
     """
-    
+
     def __init__(
         self,
         uart_port: str = "/dev/ttyUSB2",
@@ -51,7 +51,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
     ):
         """
         Inicializa conexión con la FPGA.
-        
+
         Args:
             uart_port: Puerto serie donde está la FPGA (default: /dev/ttyUSB2)
             baud_rate: Velocidad de comunicación (default: 115200)
@@ -60,7 +60,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self.uart_port = uart_port
         self.baud_rate = baud_rate
         self.clk_freq = clk_freq
-        
+
         self.interface = None
         self.node = None
         self.traffic_generator = None
@@ -80,45 +80,40 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self._extended_register_layout = extended
 
     def begin_reconfiguration(self):
-    """
-    Marca el hardware como ocupado por una reconfiguración DFX.
-    """
-    with self._lock:
-        self._reconfiguring = True
+        """
+        Marca el hardware como ocupado por una reconfiguración DFX.
+        """
+        with self._lock:
+            self._reconfiguring = True
 
-        
-        if self.interface is not None:
-            try:
-                self.interface.serial_port.reset_input_buffer()
-                self.interface.serial_port.reset_output_buffer()
-            except Exception:
-                pass
+            if self.interface is not None:
+                try:
+                    self.interface.serial_port.reset_input_buffer()
+                    self.interface.serial_port.reset_output_buffer()
+                except Exception:
+                    pass
 
-        print(" Acceso a FPGA bloqueado: DFX en progreso")
+            print("Acceso a FPGA bloqueado: DFX en progreso")
 
     def finish_reconfiguration(self):
-    """
-    Reconecta XFCP después de la reconfiguración y vuelve
-    a permitir el acceso normal a la FPGA.
-    """
-    with self._lock:
-        try:
-            self.reconnect()
-            self._reconfiguring = False
-            print("FPGA reconectada: fin de DFX")
-
-        except Exception:
-        
-            self._reconfiguring = True
-            raise
-
+        """
+        Reconecta XFCP después de la reconfiguración y vuelve
+        a permitir el acceso normal a la FPGA.
+        """
+        with self._lock:
+            try:
+                self._connect()
+                self._reconfiguring = False
+                print("FPGA reconectada: fin de DFX")
+            except Exception:
+                self._reconfiguring = True
+                raise
 
     def _check_available(self):
-    """Impide acceder a la FPGA mientras se realiza DFX."""
-    if self._reconfiguring:
-        raise RuntimeError(
-            "FPGA temporalmente no disponible: reconfiguración DFX en progreso")
-
+        """Impide acceder a la FPGA mientras se realiza DFX."""
+        if self._reconfiguring:
+            raise RuntimeError(
+                "FPGA temporalmente no disponible: reconfiguración DFX en progreso")
 
     def _connect(self):
         """Establece conexión con la FPGA vía XFCP/UART"""
@@ -128,7 +123,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             print(f"{'='*60}")
             print(f"Puerto: {self.uart_port}")
             print(f"Baud rate: {self.baud_rate}")
-            
+
             # Crear interfaz XFCP
             self.interface = SerialInterface(
                 self.uart_port,
@@ -142,7 +137,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             # Enumerar dispositivos
             self.node = self.interface.enumerate()
             print(" Dispositivo XFCP detectado")
-            
+
             # Crear TrafficGenerator usando código del tutor
             self.traffic_generator = TrafficGenerator.fromRegisters(
                 write_func=self.node.write,
@@ -151,12 +146,12 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 extended_register_layout=self._extended_register_layout,
             )
             print(" TrafficGenerator inicializado")
-            
+
             # Mostrar información de puertos detectados
             num_ports = len(self.traffic_generator.port_dict)
             print(f"\n Hardware detectado:")
             print(f"   Total de puertos: {num_ports}")
-            
+
             for port_id, port in self.traffic_generator.port_dict.items():
                 print(f"\n   Puerto {port_id}:")
                 print(f"      Velocidad: {port.PORT_RATE} Mbps ({port.PORT_RATE/1000} Gbps)")
@@ -164,24 +159,24 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 print(f"      RX habilitado: {bool(port.RX_TRAFFIC_ENABLE)}")
                 print(f"      TX habilitado: {bool(port.TX_TRAFFIC_ENABLE)}")
                 print(f"      GEN habilitado: {bool(port.GEN_TRAFFIC_ENABLE)}")
-            
+
             print(f"\n{'='*60}")
             print(f" Conexión con FPGA exitosa")
             print(f"{'='*60}\n")
-            
+
         except Exception as e:
             print(f"\n{'='*60}")
             print(f" ERROR AL CONECTAR CON FPGA")
             print(f"{'='*60}")
             raise ConnectionError(
                 f"No se pudo conectar con la FPGA en {self.uart_port}\n\n"
-               
+
             )
-    
+
     # ========================================================================
     # IMPLEMENTACIÓN DE IPortHardware
     # ========================================================================
-    
+
     def get_ports(self) -> list[int]:
         """
         Retorna lista de IDs de puertos disponibles.
@@ -193,31 +188,31 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             if not self.traffic_generator:
                 raise RuntimeError("TrafficGenerator no inicializado")
             return list(self.traffic_generator.port_dict.keys())
-    
+
     def read_counters(self, port_id: int) -> PortCounters:
         """
         Lee contadores REALES desde la FPGA.
-        
+
         Args:
             port_id: ID del puerto (0, 1, 2, 3...)
-        
+
         Returns:
             PortCounters con valores reales de la FPGA
-        
+
         Raises:
             ValueError: Si el puerto no existe
             RuntimeError: Si hay error al leer
         """
         if not self.traffic_generator:
             raise RuntimeError("TrafficGenerator no inicializado")
-        
+
         if port_id not in self.traffic_generator.port_dict:
             available = list(self.traffic_generator.port_dict.keys())
             raise ValueError(
                 f"Puerto {port_id} no existe. "
                 f"Puertos disponibles: {available}"
             )
-        
+
         port = self.traffic_generator.port_dict[port_id]
 
         try:
@@ -237,7 +232,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             raise RuntimeError(
                 f"Error al leer contadores del puerto {port_id}: {e}"
             )
-    
+
     def set_generator(
         self,
         port_id: int,
@@ -248,28 +243,28 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
     ) -> None:
         """
         Configura el generador de tráfico REAL.
-        
+
         Args:
             port_id: ID del puerto
             enabled: True para activar, False para desactivar
             length: Longitud del frame en bytes
             counter: Valor del contador (calculado según bandwidth)
             counter_frac: Valor del contador fraccional
-        
+
         Raises:
             ValueError: Si el puerto no existe
             RuntimeError: Si hay error al configurar
         """
         if not self.traffic_generator:
             raise RuntimeError("TrafficGenerator no inicializado")
-        
+
         if port_id not in self.traffic_generator.port_dict:
             available = list(self.traffic_generator.port_dict.keys())
             raise ValueError(
                 f"Puerto {port_id} no existe. "
                 f"Puertos disponibles: {available}"
             )
-        
+
         port = self.traffic_generator.port_dict[port_id]
 
         try:
@@ -305,7 +300,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             raise RuntimeError(
                 f"Error al configurar generador en puerto {port_id}: {e}"
             )
-    
+
     def set_mux(
         self,
         port_id: int,
@@ -314,32 +309,32 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
     ) -> None:
         """
         Configura multiplexores REALES.
-        
+
         Args:
             port_id: ID del puerto
             rx_mux: Modo RX ('null', 'mac', 'gen') o None
             tx_mux: Modo TX ('null', 'mac') o None
-        
+
         Raises:
             ValueError: Si el puerto no existe o modo inválido
             RuntimeError: Si hay error al configurar
         """
         if not self.traffic_generator:
             raise RuntimeError("TrafficGenerator no inicializado")
-        
+
         if port_id not in self.traffic_generator.port_dict:
             available = list(self.traffic_generator.port_dict.keys())
             raise ValueError(
                 f"Puerto {port_id} no existe. "
                 f"Puertos disponibles: {available}"
             )
-        
+
         port = self.traffic_generator.port_dict[port_id]
 
         try:
             with self._lock:
                 self._check_available()
-                
+
                 if rx_mux is not None:
                     print(f"  Puerto {port_id} - RX MUX: {rx_mux}")
                     if rx_mux == "null":
@@ -427,24 +422,24 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
     # ========================================================================
     # MÉTODOS ADICIONALES ÚTILES
     # ========================================================================
-    
+
     def get_port_info(self, port_id: int) -> dict:
         """
         Obtiene información detallada de un puerto.
-        
+
         Útil para debugging y diagnóstico.
-        
+
         Args:
             port_id: ID del puerto
-        
+
         Returns:
             Dict con información del puerto
         """
         if port_id not in self.traffic_generator.port_dict:
             raise ValueError(f"Puerto {port_id} no existe")
-        
+
         port = self.traffic_generator.port_dict[port_id]
-        
+
         return {
             "port_id": port.PORT_ID,
             "port_rate_mbps": port.PORT_RATE,

@@ -36,3 +36,15 @@ class IPortHardware(ABC):
     @abstractmethod
     def set_mux(self,port_id:int, rx_mux:str | None=None,  tx_mux: str | None = None) -> None:
         pass
+
+    @abstractmethod
+    def set_register_layout(self, extended: bool) -> None:
+        pass
+
+    @abstractmethod
+    def begin_reconfiguration(self) -> None:
+        pass
+
+    @abstractmethod
+    def finish_reconfiguration(self) -> None:
+        pass
