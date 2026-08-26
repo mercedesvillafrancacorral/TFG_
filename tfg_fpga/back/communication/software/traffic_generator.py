@@ -88,6 +88,18 @@ class Port():
 
         self.gen_common_count_width   = math.ceil(math.log2(self.GEN_TRAFFIC_COMMON_COUNT)) if self.GEN_TRAFFIC_COMMON_COUNT > 1 else 0
 
+        # Ancho real del campo "target" dentro de la palabra de configuracion del
+        # generador, tal y como lo reserva port_sync.v:244: clog2 sobre el espacio
+        # COMPLETO de targets (comunes + los de RAM) mas los bits de direccionamiento
+        # de RAM. Con GEN_TRAFFIC_RAM_COUNT=0 se reduce a gen_common_count_width, que
+        # es por lo que los bitstreams clasicos funcionaban usando ese valor; con RAM
+        # el campo es mas ancho y usar gen_common_count_width desplaza enable/counter
+        # y el generador nunca arranca.
+        self.gen_target_width = (
+            math.ceil(math.log2(target_count)) + ram_addressing_bits
+            if target_count > 1 else 0
+        )
+
     # Low level configuration methods
     def write_int(self, offset: int = 0, addr: int = 0, value: int = 0):
         write_conf_reg_int(write_func=self.write_func, offset=self.offset + offset, address=addr, data=value)
@@ -115,7 +127,7 @@ class Port():
     def set_rx_gen_common_counter(self, target: int = 0, enable: int =1, counter: int = 100, counter_frac: int = 0, length: int = 64, common_type: int = 0, vlan_enable:int = 0, destination_mac_address:int = 0x0, 
         source_mac_address:int = 0x0, vlan_id:int = 0x1, vlan_pcp:int = 0x0, vlan_dei:int = 0x0, ether_type:int = 0x0001):
         """Create (enable) or disable (disable) RX traffic generator common counter"""
-        write_port_rx_gen_common_counter(read_func=self.read_func, write_func=self.write_func, offset=self.offset, target=target, target_width=self.gen_common_count_width,
+        write_port_rx_gen_common_counter(read_func=self.read_func, write_func=self.write_func, offset=self.offset, target=target, target_width=self.gen_target_width,
             enable=enable, counter=counter, counter_width=self.GEN_COUNTER_WIDTH, counter_frac=counter_frac, counter_frac_width=self.GEN_COUNTER_FRAC_WIDTH, length=length, length_width=16, common_type=common_type, common_type_width=1, 
             vlan_enable=vlan_enable, destination_mac_address=destination_mac_address, source_mac_address=source_mac_address, vlan_id=vlan_id, vlan_pcp=vlan_pcp, vlan_dei=vlan_dei, ether_type=ether_type)
 
