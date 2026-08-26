@@ -2,6 +2,7 @@
 import sys
 import os
 import threading
+import time
 from typing import Optional
 
 # Añadir software/ al path para que traffic_generator.py pueda importar control_methods
@@ -63,7 +64,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self.interface = None
         self.node = None
         self.traffic_generator = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._reconfiguring = False
         self._extended_register_layout = False
 
         self._connect()
@@ -77,17 +79,46 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         """
         self._extended_register_layout = extended
 
-    def reconnect(self):
-        """Cierra la conexión actual y reconecta. Seguro para llamar con el data_collector activo."""
-        with self._lock:
+    def begin_reconfiguration(self):
+    """
+    Marca el hardware como ocupado por una reconfiguración DFX.
+    """
+    with self._lock:
+        self._reconfiguring = True
+
+        
+        if self.interface is not None:
             try:
-                self.interface.serial_port.close()
+                self.interface.serial_port.reset_input_buffer()
+                self.interface.serial_port.reset_output_buffer()
             except Exception:
                 pass
-            self.interface = None
-            self.node = None
-            self.traffic_generator = None
-            self._connect()
+
+        print(" Acceso a FPGA bloqueado: DFX en progreso")
+
+    def finish_reconfiguration(self):
+    """
+    Reconecta XFCP después de la reconfiguración y vuelve
+    a permitir el acceso normal a la FPGA.
+    """
+    with self._lock:
+        try:
+            self.reconnect()
+            self._reconfiguring = False
+            print("FPGA reconectada: fin de DFX")
+
+        except Exception:
+        
+            self._reconfiguring = True
+            raise
+
+
+    def _check_available(self):
+    """Impide acceder a la FPGA mientras se realiza DFX."""
+    if self._reconfiguring:
+        raise RuntimeError(
+            "FPGA temporalmente no disponible: reconfiguración DFX en progreso")
+
 
     def _connect(self):
         """Establece conexión con la FPGA vía XFCP/UART"""
@@ -104,7 +135,10 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 self.baud_rate
             )
             print("✓ Interfaz XFCP creada")
-            
+            self.interface.serial_port.reset_input_buffer()
+            self.interface.serial_port.reset_output_buffer()
+
+            time.sleep(0.2)
             # Enumerar dispositivos
             self.node = self.interface.enumerate()
             print(" Dispositivo XFCP detectado")
@@ -188,6 +222,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
 
         try:
             with self._lock:
+                self._check_available()
                 return PortCounters(
                     rx_port_in_frames=port.get_rx_port_in_frame_counter(),
                     rx_port_out_frames=port.get_rx_port_out_frame_counter(),
@@ -239,6 +274,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
 
         try:
             with self._lock:
+                self._check_available()
                 if enabled:
                     print(f"\n  Activando generador en puerto {port_id}:")
                     print(f"   Frame length: {length} bytes")
@@ -302,6 +338,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
 
         try:
             with self._lock:
+                self._check_available()
+                
                 if rx_mux is not None:
                     print(f"  Puerto {port_id} - RX MUX: {rx_mux}")
                     if rx_mux == "null":
@@ -355,6 +393,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             )
         try:
             with self._lock:
+                self._check_available()
                 if enabled:
                     port.set_rx_gen_mux()
                     port.set_tx_mac_mux()
