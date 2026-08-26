@@ -47,7 +47,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self,
         uart_port: str = "/dev/ttyUSB2",
         baud_rate: int = 115200,
-        clk_freq: float = 350e6
+        clk_freq: float = 350e6,
+        extended_register_layout: bool = False
     ):
         """
         Inicializa conexión con la FPGA.
@@ -56,6 +57,10 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             uart_port: Puerto serie donde está la FPGA (default: /dev/ttyUSB2)
             baud_rate: Velocidad de comunicación (default: 115200)
             clk_freq: Frecuencia de reloj del sistema en Hz (default: 350 MHz)
+            extended_register_layout: mapa de registros a usar en el primer connect
+                (ver Port.initialize en traffic_generator.py). Bitstreams con
+                PORT_GEN_TRAFFIC_RAM_COUNT>0 (como los generados por
+                fix_generator_count_v3.tcl) usan el mapa extendido.
         """
         self.uart_port = uart_port
         self.baud_rate = baud_rate
@@ -66,7 +71,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self.traffic_generator = None
         self._lock = threading.RLock()
         self._reconfiguring = False
-        self._extended_register_layout = False
+        self._extended_register_layout = extended_register_layout
 
         self._connect()
 

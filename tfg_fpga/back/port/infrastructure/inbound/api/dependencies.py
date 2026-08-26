@@ -12,7 +12,11 @@ if mode == "real":
     uart_port = os.getenv("UART_PORT")
     if not uart_port:
         raise RuntimeError("MODE=real requiere UART_PORT (arráncalo con start.sh, que lo detecta automáticamente)")
-    hardware = FPGATrafficGeneratorAdapter(uart_port=uart_port)
+    extended_register_layout = os.getenv("EXTENDED_REGISTER_LAYOUT", "false").lower() == "true"
+    hardware = FPGATrafficGeneratorAdapter(
+        uart_port=uart_port,
+        extended_register_layout=extended_register_layout,
+    )
 else:
     # Fase 1: Simulación local — ZCU102=4 puertos, Alveo U200=2 puertos
     from back.port.infrastructure.outbound.mock_port_hardware_adapter import PortHardwareAdapter
