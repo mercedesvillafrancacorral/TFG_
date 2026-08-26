@@ -453,6 +453,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             "rx_enabled": bool(port.RX_TRAFFIC_ENABLE),
             "tx_enabled": bool(port.TX_TRAFFIC_ENABLE),
             "gen_enabled": bool(port.GEN_TRAFFIC_ENABLE),
+            "rx_valid": bool(port.RX_VALID),
             "generators_count": port.GEN_TRAFFIC_COMMON_COUNT,
             "counter_width": port.GEN_COUNTER_WIDTH,
             "counter_frac_width": port.GEN_COUNTER_FRAC_WIDTH,
