@@ -407,7 +407,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                         ether_type=0x0800,
                     )
                 else:
-                    port.delete_rx_gen_common_counter(target=target)
+                    port.de
+                    lete_rx_gen_common_counter(target=target)
         except Exception as e:
             raise RuntimeError(f"Error al configurar el flujo {target} del puerto {port_id}: {e}")
     def get_clk_freq(self, port_id: int) -> float:
