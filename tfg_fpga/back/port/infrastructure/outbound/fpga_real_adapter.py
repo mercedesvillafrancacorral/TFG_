@@ -64,9 +64,19 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         self.node = None
         self.traffic_generator = None
         self._lock = threading.Lock()
+        self._extended_register_layout = False
 
         self._connect()
-    
+
+    def set_register_layout(self, extended: bool) -> None:
+        """
+        Indica que mapa de registros de puerto usar en el proximo (re)connect.
+        No todos los bitstreams comparten el mismo mapa (ver Port.initialize en
+        traffic_generator.py) — quien reprograme la FPGA debe avisar aqui cual
+        toca antes de reconectar, o las lecturas leeran el campo del vecino.
+        """
+        self._extended_register_layout = extended
+
     def reconnect(self):
         """Cierra la conexión actual y reconecta. Seguro para llamar con el data_collector activo."""
         with self._lock:
@@ -103,7 +113,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             self.traffic_generator = TrafficGenerator.fromRegisters(
                 write_func=self.node.write,
                 read_func=self.node.read,
-                offset=0x0
+                offset=0x0,
+                extended_register_layout=self._extended_register_layout,
             )
             print(" TrafficGenerator inicializado")
             
@@ -413,8 +424,8 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
         """
         Diagnostico: registros crudos de nivel de placa (offset 0x0), leidos
         directamente sin pasar por Port/TrafficGenerator. Compara esto entre
-        configuraciones (normal vs. dfx_normal vs. dfx_vlan) para ver si el
-        bloque de puertos o el de switch/FCL se desplazaron de direccion.
+        distintos bitstreams cargados para ver si el bloque de puertos o el
+        de switch/FCL se desplazaron de direccion.
         """
         if self.node is None:
             raise RuntimeError("TrafficGenerator no inicializado")

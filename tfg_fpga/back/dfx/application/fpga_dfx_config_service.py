@@ -22,9 +22,9 @@ class FpgaDfxConfigService:
         # around them. config1_v2.bit is a full image (static shell + VIO core) that
         # loads like any other full bitstream, so it's is_dfx=False despite the name.
         self._library: dict[str, FpgaConfiguration] = {
-            "normal": FpgaConfiguration(name="normal", bit_filename="fpga.bit", is_dfx=False),
-            "dfx_normal": FpgaConfiguration(name="dfx_normal", bit_filename="config1_v2.bit", is_dfx=False),
-            "dfx_vlan": FpgaConfiguration(name="dfx_vlan", bit_filename="config2_v2_partial.bit", is_dfx=True),
+            "normal": FpgaConfiguration(name="normal", bit_filename="fpga.bit", is_dfx=False, uses_dfx_register_layout=False),
+            "dfx_normal": FpgaConfiguration(name="dfx_normal", bit_filename="config1_v2.bit", is_dfx=False, uses_dfx_register_layout=True),
+            "dfx_vlan": FpgaConfiguration(name="dfx_vlan", bit_filename="config2_v2_partial.bit", is_dfx=True, uses_dfx_register_layout=True),
         }
 
     def list_configs(self) -> list[str]:
@@ -46,6 +46,7 @@ class FpgaDfxConfigService:
         if self.hardware is not None:
             # Reprogramar la FPGA tira el enlace UART, igual que en /ports/reset_fpga:
             # sin reabrirlo aquí, las lecturas posteriores van contra una conexión obsoleta.
+            self.hardware.set_register_layout(extended=config.uses_dfx_register_layout)
             time.sleep(RECONNECT_SETTLE_SECONDS)
             self.hardware.reconnect()
 

@@ -19,11 +19,6 @@ from back.port.infrastructure.inbound.api.model_response import (
 )
 
 FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
-CONFIG_LIBRARY = {
-    "normal": {"bit": "fpga.bit", "dfx": False},
-    "dfx_normal": {"bit": "config1_v2.bit", "dfx": False},
-    "dfx_vlan": {"bit": "config2_v2_partial.bit", "dfx": True},
-}
 
 router = APIRouter(prefix="/ports", tags=["ports"])
 
@@ -59,7 +54,7 @@ def get_counters(port_id: int, service: PortCountersService = Depends(get_port_s
 def get_port_info(port_id: int):
     """Diagnóstico: parámetros constantes leídos del puerto (rate, anchos de contador, etc.)
     tal y como quedaron cacheados en el último connect/reconnect. Útil para comparar el
-    mapa de registros entre configuraciones (p.ej. normal vs. dfx_vlan)."""
+    mapa de registros entre distintos bitstreams cargados."""
     try:
         return hardware.get_port_info(port_id)
     except ValueError as e:
@@ -260,6 +255,9 @@ def reset_fpga(service: PortCountersService = Depends(get_port_service)):
 
         link_ready = True
         if os.getenv("MODE", "simulation").lower() == "real":
+            # fpga.bit siempre usa el mapa de registros clasico, aunque justo antes
+            # se hubiera activado el mapa extendido para otro bitstream.
+            hardware.set_register_layout(extended=False)
             time.sleep(6)
             hardware.reconnect()
             link_ready = service.wait_for_retry_connection()

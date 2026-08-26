@@ -188,6 +188,17 @@ RB_PORT_GEN_COUNTER_FRAC_WIDTH               = 0x34
 RB_PORT_GEN_MIN_FRAME_LENGTH                 = 0x38
 RB_PORT_READ_WIDTH                           = 0x3C
 
+# Mapa alternativo: algunos bitstreams (p.ej. config1_v2.bit / config2_v2_partial.bit)
+# tienen un port_sync.v que inserta dos registros de generador por RAM entre
+# GEN_TRAFFIC_COMMON_COUNT y GEN_COUNTER_WIDTH, desplazando el resto del banco
+# 2 registros respecto al mapa "clasico" de arriba (el que usa fpga.bit).
+RB_PORT_GEN_TRAFFIC_RAM_COUNT_EXT            = 0x30
+RB_PORT_GEN_TRAFFIC_RAM_TARGET_COUNT_EXT     = 0x34
+RB_PORT_GEN_COUNTER_WIDTH_EXT                = 0x38
+RB_PORT_GEN_COUNTER_FRAC_WIDTH_EXT           = 0x3C
+RB_PORT_GEN_MIN_FRAME_LENGTH_EXT             = 0x40
+RB_PORT_READ_WIDTH_EXT                       = 0x44
+
 RB_PORT_RX_READ_COMPLETE                     = 0x50
 RB_PORT_RX_READ_DATA                         = 0x54
 RB_PORT_RX_READ_READY                        = 0x50

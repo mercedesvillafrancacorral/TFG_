@@ -7,9 +7,13 @@ from back.dfx.application.fpga_dfx_config_service import FpgaDfxConfigService
 class Hardware:
     def __init__(self):
         self.reconnect_calls = 0
+        self.register_layout = None
 
     def reconnect(self):
         self.reconnect_calls += 1
+
+    def set_register_layout(self, extended: bool) -> None:
+        self.register_layout = extended
 
 
 class Programmer:
@@ -87,3 +91,14 @@ def test_load_config_reconnects_hardware_after_programming(monkeypatch):
     service.load_config("dfx_vlan")
 
     assert hardware.reconnect_calls == 1
+    assert hardware.register_layout is True
+
+
+def test_load_normal_config_uses_classic_register_layout(monkeypatch):
+    monkeypatch.setattr(fpga_dfx_config_service_module.time, "sleep", lambda _seconds: None)
+    hardware = Hardware()
+    service = FpgaDfxConfigService(Programmer(), CountersService(), hardware)
+
+    service.load_config("normal")
+
+    assert hardware.register_layout is False

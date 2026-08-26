@@ -38,9 +38,15 @@ class Port():
         
         self.offset = offset
 
-    def initialize(self):
+    def initialize(self, extended_register_layout: bool = False):
         """
-        Prepare Port
+        Prepare Port.
+
+        extended_register_layout: False para el mapa "clasico" (fpga.bit, usado por
+        /ports/reset_fpga). True para bitstreams cuyo port_sync.v inserta
+        GEN_TRAFFIC_RAM_COUNT/GEN_TRAFFIC_RAM_TARGET_COUNT antes de GEN_COUNTER_WIDTH
+        y desplaza el resto del banco 2 registros. Confundir los dos mapas en el
+        bitstream equivocado lee los campos del vecino.
         """
 
         # Read all constant architectural parameters (non-changing over time)
@@ -49,11 +55,30 @@ class Port():
         self.FEATURES                = self.read_conf_int(addr=RB_PORT_FEATURES)
         self.RX_VALID                = self.read_conf_int(addr=RB_PORT_RX_VALID)
         self.GEN_TRAFFIC_COMMON_COUNT = self.read_conf_int(addr=RB_PORT_GEN_TRAFFIC_COMMON_COUNT)
-        self.GEN_COUNTER_WIDTH       = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_WIDTH)
-        self.GEN_COUNTER_FRAC_WIDTH  = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_FRAC_WIDTH)
-        self.GEN_MIN_FRAME_LENGTH    = self.read_conf_int(addr=RB_PORT_GEN_MIN_FRAME_LENGTH)
-        self.READ_WIDTH              = self.read_conf_int(addr=RB_PORT_READ_WIDTH)
-        self.RX_WRITE_WIDTH          = 1 + 146 + 2 + self.GEN_COUNTER_WIDTH + self.GEN_COUNTER_FRAC_WIDTH + math.ceil(math.log2(self.GEN_TRAFFIC_COMMON_COUNT))
+
+        if extended_register_layout:
+            self.GEN_TRAFFIC_RAM_COUNT        = self.read_conf_int(addr=RB_PORT_GEN_TRAFFIC_RAM_COUNT_EXT)
+            self.GEN_TRAFFIC_RAM_TARGET_COUNT = self.read_conf_int(addr=RB_PORT_GEN_TRAFFIC_RAM_TARGET_COUNT_EXT)
+            self.GEN_COUNTER_WIDTH       = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_WIDTH_EXT)
+            self.GEN_COUNTER_FRAC_WIDTH  = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_FRAC_WIDTH_EXT)
+            self.GEN_MIN_FRAME_LENGTH    = self.read_conf_int(addr=RB_PORT_GEN_MIN_FRAME_LENGTH_EXT)
+            self.READ_WIDTH              = self.read_conf_int(addr=RB_PORT_READ_WIDTH_EXT)
+        else:
+            self.GEN_TRAFFIC_RAM_COUNT        = 0
+            self.GEN_TRAFFIC_RAM_TARGET_COUNT = 0
+            self.GEN_COUNTER_WIDTH       = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_WIDTH)
+            self.GEN_COUNTER_FRAC_WIDTH  = self.read_conf_int(addr=RB_PORT_GEN_COUNTER_FRAC_WIDTH)
+            self.GEN_MIN_FRAME_LENGTH    = self.read_conf_int(addr=RB_PORT_GEN_MIN_FRAME_LENGTH)
+            self.READ_WIDTH              = self.read_conf_int(addr=RB_PORT_READ_WIDTH)
+
+        # Replica la formula de port_sync.v:244. Con GEN_TRAFFIC_RAM_COUNT=0 (mapa
+        # clasico) se reduce exactamente a la formula original.
+        target_count = self.GEN_TRAFFIC_COMMON_COUNT + self.GEN_TRAFFIC_RAM_COUNT * self.GEN_TRAFFIC_RAM_TARGET_COUNT
+        ram_addressing_bits = 0 if self.GEN_TRAFFIC_RAM_COUNT == 0 else math.ceil(math.log2(self.GEN_TRAFFIC_RAM_TARGET_COUNT))
+        self.RX_WRITE_WIDTH = (
+            1 + 146 + 2 + self.GEN_COUNTER_WIDTH + self.GEN_COUNTER_FRAC_WIDTH
+            + math.ceil(math.log2(target_count)) + ram_addressing_bits
+        )
         self.TX_WRITE_WIDTH          = 1 + 8 + 1
 
         self.RX_TRAFFIC_ENABLE       = (self.FEATURES & (1 << 0)) >> 0
@@ -223,7 +248,7 @@ class TrafficGenerator():
         self.port_100g_module_count = port_100G_enable_sum
 
 
-    def initialize(self):
+    def initialize(self, extended_register_layout: bool = False):
         """
         Prepare Ports
         """
@@ -235,7 +260,7 @@ class TrafficGenerator():
                 port = Port(write_func=self.write_func, read_func=self.read_func, offset=self.port_offset + i*self.port_stride)
 
                 try:
-                    port.initialize()
+                    port.initialize(extended_register_layout=extended_register_layout)
                 except Exception as e:
                     port_id = getattr(port, "PORT_ID", i)
                     print(f"AVISO: puerto {port_id} no disponible ({e}); probable reconfiguración parcial pendiente de recarga completa")
@@ -246,9 +271,12 @@ class TrafficGenerator():
 
 
     @classmethod
-    def fromRegisters(cls, write_func, read_func, offset: int = 0x0):
+    def fromRegisters(cls, write_func, read_func, offset: int = 0x0, extended_register_layout: bool = False):
         """
-        Traffic generator initialization by reading from its RB control registers
+        Traffic generator initialization by reading from its RB control registers.
+
+        extended_register_layout: pasa True cuando el bitstream cargado usa el mapa
+        de registros extendido (ver Port.initialize).
         """
 
         port_enable_sum      = read_conf_reg_int(read_func=read_func, offset=offset, address=0x10, length=4)
@@ -258,8 +286,8 @@ class TrafficGenerator():
         port_stride          = read_conf_reg_int(read_func=read_func, offset=offset, address=0x20, length=4)
 
         self = cls(read_func=read_func, write_func=write_func, offset=offset, port_offset=port_offset, port_stride=port_stride, port_enable_sum=port_enable_sum, port_25G_enable_sum=port_25G_enable_sum, port_100G_enable_sum=port_100G_enable_sum)
-    
-        self.initialize()
+
+        self.initialize(extended_register_layout=extended_register_layout)
 
         return self
 
