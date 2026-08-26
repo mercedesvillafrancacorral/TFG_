@@ -25,52 +25,52 @@ class FpgaDfxConfigService:
             "dfx_vlan": FpgaConfiguration(name="dfx_vlan", bit_filename="config2_v2_partial.bit", is_dfx=True, uses_dfx_register_layout=True),
         }
 
-    def load_config(self, name: str) -> bool:
-    config = self._library.get(name)
+        def load_config(self, name: str) -> bool:
+        config = self._library.get(name)
 
-    if config is None:
-        raise ValueError(
-            f"Configuración desconocida: {name}. "
-            f"Disponibles: {list(self._library)}"
-        )
-
-    if self.hardware is not None:
-        self.hardware.begin_reconfiguration()
-
-    try:
-        if config.is_dfx:
-            print("[DFX] Desacoplando RP...")
-            self.programmer.run_vio_script("vio_decouple_on.tcl")
-
-        print(f"[DFX] Programando {config.bit_filename}...")
-        self.programmer.program(config.bit_filename)
-
-        if config.is_dfx:
-            print("[DFX] Aplicando reset y reacoplando RP...")
-            self.programmer.run_vio_script("vio_pulse_reset.tcl")
+        if config is None:
+            raise ValueError(
+                f"Configuración desconocida: {name}. "
+                f"Disponibles: {list(self._library)}"
+            )
 
         if self.hardware is not None:
-            self.hardware.set_register_layout(
-                extended=config.uses_dfx_register_layout
-            )
+            self.hardware.begin_reconfiguration()
 
+        try:
+            if config.is_dfx:
+                print("[DFX] Desacoplando RP...")
+                self.programmer.run_vio_script("vio_decouple_on.tcl")
+
+            print(f"[DFX] Programando {config.bit_filename}...")
+            self.programmer.program(config.bit_filename)
+
+            if config.is_dfx:
+                print("[DFX] Aplicando reset y reacoplando RP...")
+                self.programmer.run_vio_script("vio_pulse_reset.tcl")
+
+            if self.hardware is not None:
+                self.hardware.set_register_layout(
+                    extended=config.uses_dfx_register_layout
+                )
+
+                print(
+                    f"[DFX] Esperando {RECONNECT_SETTLE_SECONDS} s "
+                    "a que el hardware se estabilice..."
+                )
+                time.sleep(RECONNECT_SETTLE_SECONDS)
+
+                print("[DFX] Reconectando XFCP...")
+                self.hardware.finish_reconfiguration()
+
+            return self.counters_service.wait_for_retry_connection()
+
+        except Exception as e:
+            print(f"[DFX] ERROR: {e}")
             print(
-                f"[DFX] Esperando {RECONNECT_SETTLE_SECONDS} s "
-                "a que el hardware se estabilice..."
+                "[DFX] El acceso normal a la FPGA permanece bloqueado "
+                "hasta realizar una reconfiguración válida."
             )
-            time.sleep(RECONNECT_SETTLE_SECONDS)
-
-            print("[DFX] Reconectando XFCP...")
-            self.hardware.finish_reconfiguration()
-
-        return self.counters_service.wait_for_retry_connection()
-
-    except Exception as e:
-        print(f"[DFX] ERROR: {e}")
-        print(
-            "[DFX] El acceso normal a la FPGA permanece bloqueado "
-            "hasta realizar una reconfiguración válida."
-        )
-        raise RuntimeError(
-            f"Error durante la carga de la configuración '{name}': {e}"
-        ) from e
+            raise RuntimeError(
+                f"Error durante la carga de la configuración '{name}': {e}"
+            ) from e
