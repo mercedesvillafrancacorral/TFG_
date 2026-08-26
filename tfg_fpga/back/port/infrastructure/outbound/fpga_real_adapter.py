@@ -418,6 +418,9 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             "counter_frac_width": port.GEN_COUNTER_FRAC_WIDTH,
             "min_frame_length": port.GEN_MIN_FRAME_LENGTH,
             "read_width": port.READ_WIDTH,
+            "gen_traffic_ram_count": port.GEN_TRAFFIC_RAM_COUNT,
+            "gen_traffic_ram_target_count": port.GEN_TRAFFIC_RAM_TARGET_COUNT,
+            "rx_write_width": port.RX_WRITE_WIDTH,
         }
 
     def get_board_registers(self) -> dict:
