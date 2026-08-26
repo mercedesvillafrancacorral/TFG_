@@ -1,4 +1,4 @@
-import time
+﻿import time
 
 from back.dfx.application.i_fpga_dfx_programmer import IFpgaDfxProgrammer
 from back.dfx.domain.dfx_configuration import FpgaConfiguration
@@ -18,14 +18,32 @@ class FpgaDfxConfigService:
         self.programmer = programmer
         self.counters_service = counters_service
         self.hardware = hardware
-      
+
         self._library: dict[str, FpgaConfiguration] = {
-            "normal": FpgaConfiguration(name="normal", bit_filename="fpga.bit", is_dfx=False, uses_dfx_register_layout=False),
-            "dfx_normal": FpgaConfiguration(name="dfx_normal", bit_filename="config1_v2.bit", is_dfx=False, uses_dfx_register_layout=True),
-            "dfx_vlan": FpgaConfiguration(name="dfx_vlan", bit_filename="config2_v2_partial.bit", is_dfx=True, uses_dfx_register_layout=True),
+            "normal": FpgaConfiguration(
+                name="normal",
+                bit_filename="fpga.bit",
+                is_dfx=False,
+                uses_dfx_register_layout=False,
+            ),
+            "dfx_normal": FpgaConfiguration(
+                name="dfx_normal",
+                bit_filename="config1_v2.bit",
+                is_dfx=False,
+                uses_dfx_register_layout=True,
+            ),
+            "dfx_vlan": FpgaConfiguration(
+                name="dfx_vlan",
+                bit_filename="config2_v2_partial.bit",
+                is_dfx=True,
+                uses_dfx_register_layout=True,
+            ),
         }
 
-        def load_config(self, name: str) -> bool:
+    def list_configs(self) -> list[str]:
+        return list(self._library)
+
+    def load_config(self, name: str) -> bool:
         config = self._library.get(name)
 
         if config is None:
