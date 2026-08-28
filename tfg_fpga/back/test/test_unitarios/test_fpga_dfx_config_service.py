@@ -7,7 +7,7 @@ from back.dfx.application.fpga_dfx_config_service import FpgaDfxConfigService
 class Hardware:
     def __init__(self):
         self.begin_calls = 0
-        self.finish_calls = 0s
+        self.finish_calls = 0
         self.register_layout = None
 
     def begin_reconfiguration(self):
