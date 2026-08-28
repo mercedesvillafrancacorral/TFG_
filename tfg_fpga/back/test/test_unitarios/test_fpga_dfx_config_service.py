@@ -7,7 +7,7 @@ from back.dfx.application.fpga_dfx_config_service import FpgaDfxConfigService
 class Hardware:
     def __init__(self):
         self.begin_calls = 0
-        self.finish_calls = 0
+        self.finish_calls = 0s
         self.register_layout = None
 
     def begin_reconfiguration(self):
@@ -41,7 +41,7 @@ class CountersService:
 
 def test_list_configs_returns_known_names():
     service = FpgaDfxConfigService(Programmer(), CountersService())
-    assert service.list_configs() == ["normal", "dfx_normal", "dfx_vlan"]
+    assert service.list_configs() == ["normal", "dfx_estatica", "dfx_dinamica_vlan"]
 
 
 def test_load_normal_config_does_not_touch_vio():
@@ -57,7 +57,7 @@ def test_load_dfx_config_follows_decouple_program_reset_order():
     programmer = Programmer()
     service = FpgaDfxConfigService(programmer, CountersService())
 
-    service.load_config("dfx_vlan")
+    service.load_config("dfx_dinamica_vlan")
 
     assert programmer.calls == [
         ("vio", "vio_decouple_on.tcl"),
@@ -84,7 +84,7 @@ def test_load_config_propagates_link_ready_result():
 def test_load_config_without_hardware_skips_reconnect():
     service = FpgaDfxConfigService(Programmer(), CountersService())
 
-    assert service.load_config("dfx_vlan") is True
+    assert service.load_config("dfx_dinamica_vlan") is True
 
 
 def test_load_config_reconnects_hardware_after_programming(monkeypatch):
@@ -92,7 +92,7 @@ def test_load_config_reconnects_hardware_after_programming(monkeypatch):
     hardware = Hardware()
     service = FpgaDfxConfigService(Programmer(), CountersService(), hardware)
 
-    service.load_config("dfx_vlan")
+    service.load_config("dfx_dinamica_vlan")
 
     assert hardware.begin_calls == 1
     assert hardware.finish_calls == 1

@@ -26,14 +26,14 @@ class FpgaDfxConfigService:
                 is_dfx=False,
                 uses_dfx_register_layout=False,
             ),
-            "dfx_normal": FpgaConfiguration(
-                name="dfx_normal",
+            "dfx_estatica": FpgaConfiguration(
+                name="dfx_estatica",
                 bit_filename="config1_v3.bit",
                 is_dfx=False,
                 uses_dfx_register_layout=True,
             ),
-            "dfx_vlan": FpgaConfiguration(
-                name="dfx_vlan",
+            "dfx_dinamica_vlan": FpgaConfiguration(
+                name="dfx_dinamica_vlan",
                 bit_filename="config2_v3_partial.bit",
                 is_dfx=True,
                 uses_dfx_register_layout=True,
