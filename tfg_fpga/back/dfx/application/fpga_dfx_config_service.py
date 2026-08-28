@@ -32,6 +32,14 @@ class FpgaDfxConfigService:
                 is_dfx=False,
                 uses_dfx_register_layout=True,
             ),
+
+            "dfx_dinamica_base": FpgaConfiguration(
+                name="dfx_dinamica_base",
+                bit_filename="config1_v3_pblock_p_0__partial.bit",
+                is_dfx=True,
+                uses_dfx_register_layout=True,
+
+            ),
             "dfx_dinamica_vlan": FpgaConfiguration(
                 name="dfx_dinamica_vlan",
                 bit_filename="config2_v3_partial.bit",
