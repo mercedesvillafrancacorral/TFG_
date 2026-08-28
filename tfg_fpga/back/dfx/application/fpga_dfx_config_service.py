@@ -28,13 +28,13 @@ class FpgaDfxConfigService:
             ),
             "dfx_normal": FpgaConfiguration(
                 name="dfx_normal",
-                bit_filename="config1_v2.bit",
+                bit_filename="config1_v3.bit",
                 is_dfx=False,
                 uses_dfx_register_layout=True,
             ),
             "dfx_vlan": FpgaConfiguration(
                 name="dfx_vlan",
-                bit_filename="config2_v2_partial.bit",
+                bit_filename="config2_v3_partial.bit",
                 is_dfx=True,
                 uses_dfx_register_layout=True,
             ),

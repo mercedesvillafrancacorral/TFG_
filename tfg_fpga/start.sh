@@ -213,6 +213,7 @@ else
         GRAFANA_USER=admin \
         GRAFANA_PASS=admin \
         EXTENDED_REGISTER_LAYOUT="${EXTENDED_REGISTER_LAYOUT:-false}" \
+        EXTENDED_REGISTER_LAYOUT="${EXTENDED_REGISTER_LAYOUT:-false}" \
         "$PYTHON" -m uvicorn main:app --host 0.0.0.0 --port $API_PORT &
 fi
 API_PID=$!

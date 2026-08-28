@@ -120,6 +120,17 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
             raise RuntimeError(
                 "FPGA temporalmente no disponible: reconfiguración DFX en progreso")
 
+    def reconnect(self):
+        """
+        Restablece la conexión XFCP tras reprogramar la FPGA.
+
+        Toda reprogramación (completa o parcial) invalida la conexión serie
+        anterior, porque la lógica al otro extremo se ha reinicializado. Quien
+        reprograme debe llamar aquí antes de volver a leer o escribir.
+        """
+        with self._lock:
+            self._connect()
+
     def _connect(self):
         """Establece conexión con la FPGA vía XFCP/UART"""
         try:
