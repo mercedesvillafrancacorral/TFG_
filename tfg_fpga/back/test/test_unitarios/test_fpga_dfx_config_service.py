@@ -61,7 +61,7 @@ def test_load_dfx_config_follows_decouple_program_reset_order():
 
     assert programmer.calls == [
         ("vio", "vio_decouple_on.tcl"),
-       ("program", "config2_v3_partial.bit"),,
+       ("program", "config2_v3_partial.bit"),
         ("vio", "vio_pulse_reset.tcl"),
     ]
 
