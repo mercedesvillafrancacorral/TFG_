@@ -46,6 +46,13 @@ class FpgaDfxConfigService:
                 is_dfx=True,
                 uses_dfx_register_layout=True,
             ),
+            "dfx_dinamica_5_generadores_p0": FpgaConfiguration(
+                 name="dfx_generadores_5",
+                 bit_filename="config2_generators5_v4_partial.bit",
+                 is_dfx=True,
+                 uses_dfx_register_layout=True,
+),
+            
         }
 
     def list_configs(self) -> list[str]:
