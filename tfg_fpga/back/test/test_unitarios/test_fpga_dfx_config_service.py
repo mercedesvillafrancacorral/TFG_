@@ -41,7 +41,7 @@ class CountersService:
 
 def test_list_configs_returns_known_names():
     service = FpgaDfxConfigService(Programmer(), CountersService())
-    assert service.list_configs() == ["normal", "dfx_estatica", "dfx_dinamica_vlan"]
+    assert service.list_configs() == ["normal", "dfx_estatica", "dfx_dinamica_vlan", "dfx_dinamica_base"]
 
 
 def test_load_normal_config_does_not_touch_vio():
