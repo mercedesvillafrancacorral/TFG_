@@ -1,7 +1,8 @@
 
-""" Experimento de trafico mixto: valida throughput agregado, packet loss rate y
- frame error rate del generador bajo escenarios con multiples flujos concurrentes
- en el puerto 0, midiendo a traves del enlace fisico loopback puerto0<->puerto2."""
+#!/usr/bin/env bash
+# Experimento de trafico mixto: valida throughput agregado, packet loss rate y
+#frame error rate del generador bajo escenarios con multiples flujos concurrentes
+# en el puerto 0, midiendo a traves del enlace fisico loopback puerto0<->puerto2.
 
 set -u
 
@@ -26,14 +27,24 @@ check_api() {
 
 get_counter() {
   local port=$1 field=$2
-  curl -s -m 5 "$API/ports/$port/counters" | grep -o "\"$field\":[0-9]*" | grep -o '[0-9]*$'
+  val=$(curl -s -m 5 "$API/ports/$port/counters" | grep -o "\"$field\":[0-9]*" | grep -o '[0-9]*$')
+  echo "${val:--1}"
 }
 
 configure_flow() {
   local target=$1 length=$2 bw_gbps=$3 enabled=$4
+  
   curl -s -m 5 -X POST "$API/ports/$TX_PORT/generator/$target/bandwidth" \
     -H "Content-Type: application/json" \
     -d "{\"enabled\":$enabled,\"length\":$length,\"bandwidth_gbps\":$bw_gbps}" > /dev/null
+}
+
+set_mux(){
+  local port=$1 rx=$2
+  curl -s -m 5 -X POST "$API/ports/$port/mux" \
+    -H "Content-Type: application/json" \
+    -d "{\"rx_mux\":\"$rx\",\"tx_mux\":\"mac\"}" > /dev/null
+
 }
 
 snapshot() {
@@ -53,13 +64,13 @@ run_scenario() {
   local RAW_CSV="$RESULTS_DIR/${slug}.csv"
   echo "rep,dt,gen_frames,tx_out,rx_in,gen_true_frames,fps_meas,packet_loss_rate_pct,link_loss_pct,frame_error_rate_pct" > "$RAW_CSV"
 
-  local bw_theory_sum=0 fps_theory_sum=0
+  local bandwidth_theory_sum=0 fps_theory_sum=0
   for f in "${flows[@]}"; do
     IFS=: read -r target length bw <<< "$f"
-    bw_theory_sum=$(awk -v a="$bw_theory_sum" -v b="$bw" 'BEGIN{print a+b}')
+    bandwidth_theory_sum=$(awk -v a="$bandwidth_theory_sum" -v b="$bw" 'BEGIN{print a+b}')
     fps_theory_sum=$(awk -v a="$fps_theory_sum" -v bw="$bw" -v len="$length" 'BEGIN{print a + (bw*1e9)/(8*len)}')
   done
-  echo "Ancho de banda objetivo agregado: ${bw_theory_sum} Gbps (${#flows[@]} flujos)  ->  fps teorico agregado: $(awk -v f="$fps_theory_sum" 'BEGIN{printf "%.2f", f}')"
+  echo "Ancho de banda objetivo agregado: ${bandwidth_theory_sum} Gbps (${#flows[@]} flujos)  ->  fps teorico agregado: $(awk -v f="$fps_theory_sum" 'BEGIN{printf "%.2f", f}')"
 
   for rep in $(seq 1 $REPEATS); do
     for f in "${flows[@]}"; do
@@ -85,31 +96,22 @@ run_scenario() {
         -v rx_in1="$rx_in1" -v rx_in2="$rx_in2" \
         -v gen_true1="$gen_true1" -v gen_true2="$gen_true2" \
         -v raw_csv="$RAW_CSV" '
-      BEGIN {
+        BEGIN {
         dt = t2 - t1
         dgen = gen2 - gen1
-        dtx  = tx_out2 - tx_out1
-        drx  = rx_in2 - rx_in1
+        tramas_salientes  = tx_out2 - tx_out1
+        tramas_recibidas  = rx_in2 - rx_in1
         dgen_true = gen_true2 - gen_true1
-
         fps_meas = dgen / dt
-        # packet_loss_rate: misma formula que PortCountersService.calculate_packet_loss_rate
-        # (generado por el port_traffic_gen pero no llega a salir por tx), sin el suelo max(0,...)
-        # de la version de produccion: aqui interesa preservar el signo del ruido de medida
-        # (lectura no atomica de contadores) para no sesgar la media al alza.
-        packet_loss_rate = (dgen > 0) ? (dgen - dtx) / dgen * 100 : 0
-        # link_loss: sin equivalente en PortCountersService (requiere leer dos puertos distintos).
-        # perdida en el enlace fisico: sale de TX_PORT pero no llega a RX_PORT.
-        link_loss = (dtx > 0) ? (dtx - drx) / dtx * 100 : 0
-        # frame_error_rate: misma formula que PortCountersService.calculate_frame_error_rate,
-        # tambien sin el suelo max(0,...) por el mismo motivo que packet_loss_rate.
+        packet_loss_rate = (dgen > 0) ? (dgen - tramas_salientes) / dgen * 100 : 0
+        link_loss = (tramas_salientes > 0) ? (tramas_salientes - tramas_recibidas) / tramas_salientes * 100 : 0
         frame_error_rate = (dgen > 0) ? (dgen - dgen_true) / dgen * 100 : 0
 
         printf "  rep=%d  dt=%.2fs  gen_frames=%d  tx_out=%d  rx_in=%d  gen_true_frames=%d  fps_meas=%.2f  packet_loss_rate=%.4f%%  link_loss=%.4f%%  frame_error_rate=%.4f%%\n", \
-          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate
+          rep, dt, dgen, tramas_salientes, tramas_recibidas, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate
 
         printf "%d,%.4f,%d,%d,%d,%d,%.4f,%.4f,%.4f,%.4f\n", \
-          rep, dt, dgen, dtx, drx, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate >> raw_csv
+          rep, dt, dgen, tramas_salientes, tramas_recibidas, dgen_true, fps_meas, packet_loss_rate, link_loss, frame_error_rate >> raw_csv
       }'
   done
 
@@ -143,8 +145,7 @@ run_scenario() {
 
 reset_all_flows() {
   # asegura estado limpio: deshabilita todos los targets posibles en TX_PORT
-  # por si una ejecucion anterior (interrumpida o de otra sesion) dejo alguno
-  # activo, lo que falsearia el escenario de un unico flujo
+  # por si una ejecucion anterior sigue activa 
   local t
   for t in 0 1 2 3; do
     configure_flow "$t" 64 1 false
@@ -155,6 +156,11 @@ reset_all_flows() {
 # ---- Matriz de escenarios ----
 
 check_api
+
+set_mux "$TX_PORT" gen
+set_mux "$RX_PORT" mac
+
+
 reset_all_flows
 
 run_scenario "1-flujo (crosscheck single-flow)" "1_flujo_crosscheck" "0:64:1"
