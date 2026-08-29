@@ -11,8 +11,8 @@ API="http://localhost:8000"
 TX_PORT=0     
 RX_PORT=2    
 STABILIZE=2
-WINDOW=10
-REPEATS=5
+WINDOW=60
+REPEATS=10
 RESULTS_DIR="results/$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$RESULTS_DIR"
 
