@@ -47,13 +47,28 @@ set_mux(){
 
 }
 
-snapshot() {
-  local tx_out gen rx_in gen_true
-  tx_out=$(get_counter "$TX_PORT" "tx_port_out_frames")
-  gen=$(get_counter "$TX_PORT" "rx_port_gen_frames")
-  rx_in=$(get_counter "$RX_PORT" "rx_port_in_frames")
-  gen_true=$(get_counter "$TX_PORT" "rx_port_gen_true_frames")
-  echo "$tx_out $gen $rx_in $gen_true"
+snapshot_tx() {
+    curl -sS -m 5 "$API/ports/$TX_PORT/counters" |
+    python3 -c '
+import json
+import sys
+data = json.load(sys.stdin)
+print(
+    data["tx_port_out_frames"],
+    data["rx_port_gen_frames"],
+    data["rx_port_gen_true_frames"]
+)
+'
+}
+
+snapshot_rx() {
+    curl -sS -m 5 "$API/ports/$RX_PORT/counters" |
+    python3 -c '
+import json
+import sys
+data = json.load(sys.stdin)
+print(data["rx_port_in_frames"])
+'
 }
 
 run_scenario() {
@@ -71,7 +86,8 @@ run_scenario() {
     fps_theory_sum=$(awk -v a="$fps_theory_sum" -v bw="$bw" -v len="$length" 'BEGIN{print a + (bw*1e9)/(8*len)}')
   done
   echo "Ancho de banda objetivo agregado: ${bandwidth_theory_sum} Gbps (${#flows[@]} flujos)  ->  fps teorico agregado: $(awk -v f="$fps_theory_sum" 'BEGIN{printf "%.2f", f}')"
-
+  sleep 2  # permite recibir las tramas que siguen en tránsito
+  sleep 5  # estabilización antes de la siguiente repetición
   for rep in $(seq 1 $REPEATS); do
     for f in "${flows[@]}"; do
       IFS=: read -r target length bw <<< "$f"
@@ -79,10 +95,12 @@ run_scenario() {
     done
     sleep "$STABILIZE"
 
-    read -r tx_out1 gen1 rx_in1 gen_true1 <<< "$(snapshot)"
+    read -r tx_out1 gen1 gen_true1 <<< "$(snapshot_tx)"
+    rx_in1=$(snapshot_rx)    
     t1=$(date +%s.%N)
     sleep "$WINDOW"
-    read -r tx_out2 gen2 rx_in2 gen_true2 <<< "$(snapshot)"
+    read -r tx_out2 gen2 gen_true2 <<< "$(snapshot_tx)"
+    rx_in2=$(snapshot_rx)    
     t2=$(date +%s.%N)
 
     for f in "${flows[@]}"; do
