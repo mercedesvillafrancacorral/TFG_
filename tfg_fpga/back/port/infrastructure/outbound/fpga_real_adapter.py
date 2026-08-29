@@ -499,7 +499,7 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 "switch_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_COUNT),
                 "switch_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_OFFSET),
                 "switch_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_STRIDE),
-                                "switch_ch_global_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_CH_GLOBAL_COUNT),
+                "switch_ch_global_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_CH_GLOBAL_COUNT),
                 "switch_fcl_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_FCL_COUNT),
                 "switch_row_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_ROW_COUNT),
                 "switch_col_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_COL_COUNT),
