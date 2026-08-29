@@ -113,3 +113,27 @@ def test_load_normal_config_uses_classic_register_layout(monkeypatch):
     service.load_config("normal")
 
     assert hardware.register_layout is False
+
+def test_load_dfx_two_generators_uses_expected_partial_bitstream():
+    programmer = Programmer()
+    service = FpgaDfxConfigService(programmer, CountersService())
+
+    service.load_config("dfx_dinamica_2_generadores_p0")
+
+    assert programmer.calls == [
+        ("vio", "vio_decouple_on.tcl"),
+        ("program", "config2_generators2_v5_partial.bit"),
+        ("vio", "vio_pulse_reset.tcl"),
+    ]
+
+def test_load_dfx_five_generators_uses_expected_partial_bitstream():
+    programmer = Programmer()
+    service = FpgaDfxConfigService(programmer, CountersService())
+
+    service.load_config("dfx_dinamica_5_generadores_p0")
+
+    assert programmer.calls == [
+        ("vio", "vio_decouple_on.tcl"),
+        ("program", "config2_generators5_v4_partial.bit"),
+        ("vio", "vio_pulse_reset.tcl"),
+    ]
