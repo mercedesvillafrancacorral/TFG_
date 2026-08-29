@@ -5,7 +5,6 @@ import threading
 import time
 from typing import Optional
 
-# Añadir software/ al path para que traffic_generator.py pueda importar control_methods
 _software_dir = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..', '..', 'communication', 'software')
 )
@@ -26,6 +25,11 @@ from control_registers import (                  # noqa: E402
     RB_BOARD_REG_SWITCH_COUNT,
     RB_BOARD_REG_SWITCH_OFFSET,
     RB_BOARD_REG_SWITCH_STRIDE,
+    RB_SWITCH_CH_GLOBAL_COUNT,
+    RB_SWITCH_FCL_COUNT,
+    RB_SWITCH_ROW_COUNT,
+    RB_SWITCH_COL_COUNT,
+    RB_SWITCH_PRIO_COUNT,
 )
 from back.port.application.IPortHardware import IPortHardware
 from back.port.domain.PortCounters import PortCounters
@@ -495,6 +499,11 @@ class FPGATrafficGeneratorAdapter(IPortHardware):
                 "switch_count": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_COUNT),
                 "switch_offset": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_OFFSET),
                 "switch_stride": read_conf_reg_int(read_func=read, offset=0x0, address=RB_BOARD_REG_SWITCH_STRIDE),
+                                "switch_ch_global_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_CH_GLOBAL_COUNT),
+                "switch_fcl_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_FCL_COUNT),
+                "switch_row_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_ROW_COUNT),
+                "switch_col_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_COL_COUNT),
+                "switch_prio_count": read_conf_reg_int(read_func=read, offset=0x8000, address=RB_SWITCH_PRIO_COUNT),
             }
 
     def __del__(self):
