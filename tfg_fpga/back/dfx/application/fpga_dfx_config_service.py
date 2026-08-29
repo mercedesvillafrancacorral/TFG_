@@ -51,6 +51,12 @@ class FpgaDfxConfigService:
                  bit_filename="config2_generators5_v4_partial.bit",
                  is_dfx=True,
                  uses_dfx_register_layout=True,
+            ),
+            "dfx_dinamica_2_generadores_p0": FpgaConfiguration(
+                name="dfx_dinamica_2_generadores_p0",
+                bit_filename="config2_generators2_v5_partial.bit",
+                is_dfx=True,
+                uses_dfx_register_layout=True,
 ),
             
         }

@@ -47,6 +47,7 @@ def test_list_configs_returns_known_names():
     "dfx_dinamica_base",
     "dfx_dinamica_vlan",
     "dfx_dinamica_5_generadores_p0",
+    "dfx_dinamica_2_generadores_p0",
 ]
 
 def test_load_normal_config_does_not_touch_vio():
