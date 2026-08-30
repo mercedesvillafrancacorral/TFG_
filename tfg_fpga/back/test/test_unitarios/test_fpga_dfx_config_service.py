@@ -39,6 +39,14 @@ class CountersService:
         return self.link_ready
 
 
+class FailingProgrammer:
+    def program(self, bit_filename: str) -> None:
+        raise OSError("vivado no responde")
+
+    def run_vio_script(self, script_name: str) -> None:
+        pass
+
+
 def test_list_configs_returns_known_names():
     service = FpgaDfxConfigService(Programmer(), CountersService())
     assert service.list_configs() == [
@@ -137,3 +145,36 @@ def test_load_dfx_five_generators_uses_expected_partial_bitstream():
         ("program", "config2_generators5_v4_partial.bit"),
         ("vio", "vio_pulse_reset.tcl"),
     ]
+
+def test_is_current_config_dfx_is_none_before_any_load():
+    service = FpgaDfxConfigService(Programmer(), CountersService())
+    assert service.is_current_config_dfx() is None
+
+def test_is_current_config_dfx_true_for_dfx_config():
+    service = FpgaDfxConfigService(Programmer(), CountersService())
+    service.load_config("dfx_dinamica_vlan")
+    assert service.is_current_config_dfx() is True
+
+def test_is_current_config_dfx_false_for_normal_config():
+    service = FpgaDfxConfigService(Programmer(), CountersService())
+    service.load_config("normal")
+    assert service.is_current_config_dfx() is False
+
+
+def test_load_config_wraps_programmer_failure_in_runtime_error():
+    service = FpgaDfxConfigService(FailingProgrammer(), CountersService())
+
+    with pytest.raises(RuntimeError, match="dfx_dinamica_vlan"):
+        service.load_config("dfx_dinamica_vlan")
+
+
+def test_current_config_resets_to_none_after_programmer_failure():
+    service = FpgaDfxConfigService(Programmer(), CountersService())
+    service.load_config("dfx_estatica")
+
+    service.programmer = FailingProgrammer()
+    with pytest.raises(RuntimeError):
+        service.load_config("dfx_dinamica_vlan")
+
+    assert service.get_current_config() is None
+    assert service.is_current_config_dfx() is None

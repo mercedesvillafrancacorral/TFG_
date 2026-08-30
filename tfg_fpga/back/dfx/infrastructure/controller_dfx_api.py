@@ -6,7 +6,7 @@ from back.dfx.infrastructure.inbound.dependencies import get_fpga_dfx_config_ser
 router = APIRouter(prefix="/dfx", tags=["Reconfiguración dinámica"])
 
 
-@router.get("/configurations")
+@router.get("/list_avaible_configurations")
 def list_configurations(service: FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
     configs = service.list_configs()
     return {
@@ -14,7 +14,22 @@ def list_configurations(service: FpgaDfxConfigService = Depends(get_fpga_dfx_con
         "configs": configs,
     }
 
-
+@router.get("/current_configuration")
+def get_current_configuration(service: FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
+    current = service.get_current_config()
+    if current is None:
+        return {
+            "message": "No hay ninguna configuración válida cargada actualmente.",
+            "current_config": None,
+            "is_dfx": None,
+        }
+    is_dfx = service.is_current_config_dfx()
+    return {
+        "message": f"Configuración actual: {current} ({'modo DFX' if is_dfx else 'modo estático'})",
+        "current_config": current,
+        "is_dfx": is_dfx,
+    }
+    
 @router.post("/load_configuration/{name}")
 def load_config(name: str, service: FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
     try:

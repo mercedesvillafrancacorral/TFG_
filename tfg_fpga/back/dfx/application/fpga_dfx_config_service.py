@@ -18,6 +18,7 @@ class FpgaDfxConfigService:
         self.programmer = programmer
         self.counters_service = counters_service
         self.hardware = hardware
+        self._current_config: str | None = None
 
         self._library: dict[str, FpgaConfiguration] = {
             "normal": FpgaConfiguration(
@@ -63,6 +64,14 @@ class FpgaDfxConfigService:
 
     def list_configs(self) -> list[str]:
         return list(self._library)
+        
+    def get_current_config(self) -> str | None:
+        return self._current_config
+
+    def is_current_config_dfx(self) -> bool | None:
+        if self._current_config is None:
+            return None
+        return self._library[self._current_config].is_dfx
 
     def load_config(self, name: str) -> bool:
         config = self._library.get(name)
@@ -102,9 +111,11 @@ class FpgaDfxConfigService:
                 print("[DFX] Reconectando XFCP...")
                 self.hardware.finish_reconfiguration()
 
+            self._current_config = name
             return self.counters_service.wait_for_retry_connection()
 
         except Exception as e:
+            self._current_config = None
             print(f"[DFX] ERROR: {e}")
             print(
                 "[DFX] El acceso normal a la FPGA permanece bloqueado "
