@@ -25,7 +25,7 @@ def get_current_configuration(service: FpgaDfxConfigService = Depends(get_fpga_d
         }
     is_dfx = service.is_current_config_dfx()
     return {
-        "message": f"f"Current configuration: {current} ({'DFX mode' if is_dfx else 'static mode'})",
+        "message": f"Current configuration: {current} ({'DFX mode' if is_dfx else 'static mode'})",
         "current_config": current,
         "is_dfx": is_dfx,
     }
