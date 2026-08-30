@@ -6,7 +6,7 @@ from back.dfx.infrastructure.inbound.dependencies import get_fpga_dfx_config_ser
 router = APIRouter(prefix="/dfx", tags=["Reconfiguración dinámica"])
 
 
-@router.get("/list_avaible_configurations")
+@router.get("/list_available_configurations")
 def list_configurations(service: FpgaDfxConfigService = Depends(get_fpga_dfx_config_service)):
     configs = service.list_configs()
     return {
