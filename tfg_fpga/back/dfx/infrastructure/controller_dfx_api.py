@@ -19,7 +19,7 @@ def get_current_configuration(service: FpgaDfxConfigService = Depends(get_fpga_d
     current = service.get_current_config()
     if current is None:
         return {
-            "message": "No valid configuration is currently loaded.",
+            "message": "No hay ninguna configuración válida cargada actualmente.",
             "current_config": None,
             "is_dfx": None,
         }

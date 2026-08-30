@@ -2,7 +2,7 @@
 " Test de integración que verifica el endpoint de configuración actual de la FPGA referente a DFX "
 
 def test_list_configurations_returns_200_with_known_configs(dfx_client):
-    response = dfx_client.get("/dfx/list_avaible_configurations")
+    response = dfx_client.get("/dfx/list_available_configurations")
     assert response.status_code == 200
     assert response.json()["configs"] == ["normal", "dfx_dinamica_vlan"]
 
