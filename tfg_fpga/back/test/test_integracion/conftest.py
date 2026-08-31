@@ -32,6 +32,7 @@ sys.modules["back.port.infrastructure.outbound.mock_port_hardware_adapter"] = _s
 
 from main import app
 from back.port.infrastructure.inbound.api.dependencies import get_port_service
+from back.dfx.infrastructure.inbound.dependencies import get_fpga_dfx_config_service
 
 
 class _SimHardware:
@@ -99,5 +100,70 @@ def client(api_service):
 
     with TestClient(app) as c:
         yield c  # el test recibe "c" (client) aquí y hace sus peticiones
+
+    app.dependency_overrides.clear()
+
+
+class _SimDfxService:
+    def __init__(self, configs=None, link_ready=True, raise_on=None, dfx_configs=None):
+        self._configs = configs or ["normal", "dfx_dinamica_vlan"]
+        self._link_ready = link_ready
+        self._raise_on = raise_on or {}
+        self._dfx_configs = dfx_configs or {"dfx_dinamica_vlan"}
+        self._current = None
+
+    def list_configs(self):
+        return self._configs
+
+    def load_config(self, name):
+        if name in self._raise_on:
+            self._current = None
+            raise self._raise_on[name]
+        if name not in self._configs:
+            raise ValueError(f"Configuración desconocida: {name}")
+        self._current = name
+        return self._link_ready
+
+    def get_current_config(self):
+        return self._current
+
+    def is_current_config_dfx(self):
+        if self._current is None:
+            return None
+        return self._current in self._dfx_configs
+
+
+@pytest.fixture
+def dfx_client():
+    sim_service = _SimDfxService()
+    app.dependency_overrides[get_fpga_dfx_config_service] = lambda: sim_service
+
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def dfx_client_with_failure():
+    sim_service = _SimDfxService(
+        configs=["normal", "config_falla"],
+        raise_on={"config_falla": RuntimeError("fallo simulado del programador")},
+    )
+    app.dependency_overrides[get_fpga_dfx_config_service] = lambda: sim_service
+
+    with TestClient(app) as c:
+        yield c
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def dfx_client_link_not_ready():
+    sim_service = _SimDfxService(link_ready=False)
+    app.dependency_overrides[get_fpga_dfx_config_service] = lambda: sim_service
+
+    with TestClient(app) as c:
+        yield c
 
     app.dependency_overrides.clear()

@@ -14,6 +14,7 @@ class PortHardwareAdapter(IPortHardware):
     def __init__(self, port_count: int = 4, port_stride: int = 0x100):
         self.port_count = port_count
         self.port_stride = port_stride
+        self.clk_freq = 350e6
         self.ports: dict[int, Port] = {}
 
         for port_id in range(port_count):
@@ -24,6 +25,21 @@ class PortHardwareAdapter(IPortHardware):
 
     def get_ports(self) -> list[int]:
         return list(self.ports.keys())
+
+    def get_clk_freq(self, port_id: int) -> float:
+        return self.clk_freq
+
+    def get_counter_frac_width(self, port_id: int) -> int:
+        return self.ports[port_id].GEN_COUNTER_FRAC_WIDTH
+
+    def set_register_layout(self, extended: bool) -> None:
+        pass
+
+    def begin_reconfiguration(self) -> None:
+        pass
+
+    def finish_reconfiguration(self) -> None:
+        pass
 
     def read_counters(self, port_id: int) -> PortCounters:
         port = self.ports[port_id]
