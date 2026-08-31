@@ -7,7 +7,7 @@ from back.port.domain.PortCounters import PortCounters
 class IPortHardware(ABC):
     @abstractmethod
     def read_counters(self, port_id: int) -> PortCounters:
-        pass
+        pass 
 
     @abstractmethod
     def get_ports(self)->list[int]:
@@ -35,4 +35,16 @@ class IPortHardware(ABC):
 
     @abstractmethod
     def set_mux(self,port_id:int, rx_mux:str | None=None,  tx_mux: str | None = None) -> None:
+        pass
+
+    @abstractmethod
+    def set_register_layout(self, extended: bool) -> None:
+        pass
+
+    @abstractmethod
+    def begin_reconfiguration(self) -> None:
+        pass
+
+    @abstractmethod
+    def finish_reconfiguration(self) -> None:
         pass

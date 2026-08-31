@@ -1,4 +1,3 @@
-
 open_hw
 connect_hw_server
 set targets [get_hw_targets]

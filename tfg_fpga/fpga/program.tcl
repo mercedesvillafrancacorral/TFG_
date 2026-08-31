@@ -21,4 +21,27 @@ refresh_hw_device -update_hw_probes false [current_hw_device]
 puts $bit_file
 set_property PROGRAM.FILE $bit_file [current_hw_device]
 program_hw_devices [current_hw_device]
+
+# Una carga completa del bitstream reinicia el VIO de control DFX a su valor
+# de fabrica, que deja el puerto 0 con el bus AXI-Lite desacoplado (ver
+# dbg_rp_decouple en fpga_core.v). Si el .ltx que acompana a este bitstream
+# existe, intentamos recouplear aqui mismo para no depender de acordarnos
+# a mano. Si el bitstream no trae ese VIO (p.ej. un build sin DFX), esto
+# simplemente no encuentra el probe y se salta sin romper el programado.
+set ltx_file [string map {".bit" ".ltx"} $bit_file]
+if {[file exists $ltx_file]} {
+    if {[catch {
+        set_property PROBES.FILE $ltx_file [current_hw_device]
+        set_property FULL_PROBES.FILE $ltx_file [current_hw_device]
+        refresh_hw_device [current_hw_device]
+        set_property OUTPUT_VALUE 0 [get_hw_probes core_inst/dbg_rp_decouple]
+        commit_hw_vio [get_hw_probes core_inst/dbg_rp_decouple]
+        puts "=== dbg_rp_decouple recoupleado a 0 tras el programado ==="
+    } err]} {
+        puts "AVISO: no se pudo recouplear dbg_rp_decouple tras programar ($err) — probablemente este bitstream no tiene el VIO de control DFX."
+    }
+} else {
+    puts "AVISO: no existe $ltx_file junto al bitstream, no se comprueba dbg_rp_decouple."
+}
+
 exit
