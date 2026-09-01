@@ -25,12 +25,6 @@ check_api() {
   fi
 }
 
-get_counter() {
-  local port=$1 field=$2
-  val=$(curl -s -m 5 "$API/ports/$port/counters" | grep -o "\"$field\":[0-9]*" | grep -o '[0-9]*$')
-  echo "${val:--1}"
-}
-
 configure_flow() {
   local target=$1 length=$2 bw_gbps=$3 enabled=$4
   

@@ -52,7 +52,6 @@ def test_list_configs_returns_known_names():
     assert service.list_configs() == [
     "normal",
     "dfx_estatica",
-    "dfx_dinamica_base",
     "dfx_dinamica_vlan",
     "dfx_dinamica_5_generadores_p0",
     "dfx_dinamica_2_generadores_p0",
