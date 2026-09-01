@@ -1,13 +1,20 @@
-
+import math
+import time
+from datetime import datetime
 from back.port.domain.PortCounters import PortCounters
 from back.port.application.IPortHardware import IPortHardware
 from back.port.application.PortCountersRepository import PortCountersRepository
+
 
 class PortCountersService:
 
     def __init__(self,hardware :IPortHardware, repository: PortCountersRepository):
         self.hardware=hardware
         self.repository = repository
+        self._generators: dict[int, dict[int, dict]] ={}
+        self.last_reading: dict[int,tuple]={}
+        self.throughput: dict[int, dict] = {}
+
     
     def get_ports(self)->list[int]:
         return self.hardware.get_ports()
@@ -15,8 +22,50 @@ class PortCountersService:
     def get_counters(self, port_id: int) -> PortCounters:
         self._validate_port_id(port_id)
         counters = self.hardware.read_counters(port_id)
-        self.repository.save(port_id, counters)
+
+        last_reading = self.last_reading.get(port_id)
+        date = datetime.utcnow()
+        self.last_reading[port_id] = (date, counters)
+
+        metrics = {}
+        if last_reading is not None:
+            prev_time, prev_counters = last_reading
+            total_time = (date - prev_time).total_seconds()
+            if total_time > 0:
+                metrics.update(self.calculate_throughput(counters, prev_counters, total_time))
+                metrics.update(self.calculate_packet_loss_rate(counters, prev_counters))
+                metrics.update(self.calculate_frame_error_rate(counters, prev_counters))
+
+        self.throughput[port_id] = metrics
+        self.repository.save(port_id, counters, info=metrics)
         return counters
+
+    def calculate_throughput (self, counters: PortCounters, prev_counters: PortCounters, total_time: float) -> dict:
+        rx_gen_fps = max(0, (counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames) / total_time)
+        tx_out_fps = max(0, (counters.tx_port_out_frames - prev_counters.tx_port_out_frames) / total_time)
+        return {"rx_port_gen_fps": rx_gen_fps, "tx_port_out_fps": tx_out_fps}
+    
+    def calculate_packet_loss_rate(self, counters: PortCounters,  prev_counters: PortCounters) -> dict:
+        delta_gen = counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames
+        delta_tx_out = counters.tx_port_out_frames - prev_counters.tx_port_out_frames
+        if delta_gen <= 0:
+            return {}
+        
+        packet_loss_rate = max(0, (delta_gen - delta_tx_out) / delta_gen * 100)
+        return {"packet_loss_rate": packet_loss_rate}
+
+    def calculate_frame_error_rate (self, counters: PortCounters, prev_counters: PortCounters) -> dict:
+        delta_gen = counters.rx_port_gen_frames - prev_counters.rx_port_gen_frames
+        delta_gen_true = counters.rx_port_gen_true_frames - prev_counters.rx_port_gen_true_frames
+        if delta_gen <= 0:
+            return {}
+        frame_error_rate = max(0, (delta_gen - delta_gen_true) / delta_gen * 100)
+        return {"frame_error_rate": frame_error_rate}
+    
+    def get_throughput(self, port_id: int) -> dict:
+        self._validate_port_id(port_id)
+        return self.throughput.get(port_id, {})
+    
 
     def configure_generator(
         self,
@@ -25,6 +74,7 @@ class PortCountersService:
         length: int,
         counter: int,
         counter_frac: int
+        
     ) -> None:
         self._validate_port_id(port_id)
         if length <= 0:
@@ -39,7 +89,72 @@ class PortCountersService:
             counter=counter,
             counter_frac=counter_frac,
         )
+        self._follow_generator(port_id, target=0, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac)
 
+    def configure_generator_traffic(
+        self,
+        port_id: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        target: int,
+        
+    ) -> None:
+        self._validate_port_id(port_id)
+        if length <= 0:
+            raise ValueError("length debe ser mayor que 0")
+        if counter <= 0:
+            raise ValueError("counter debe ser mayor que 0")
+
+        self.hardware.set_generator_traffic(
+            port_id=port_id,
+            enabled=enabled,
+            length=length,
+            counter=counter,
+            counter_frac=counter_frac,
+            target=target
+        )
+        self._follow_generator(port_id, target=target, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac)
+    def configure_generator_bandwidth(
+        self,
+        port_id: int,
+        enabled: bool,
+        bandwidth_gbps: float,
+        length: int,
+        target: int,
+    ) -> tuple[int, int]:
+        self._validate_port_id(port_id)
+
+        if length <= 0:
+            raise ValueError("length debe ser mayor que 0")
+
+        if bandwidth_gbps <= 0:
+            raise ValueError("bandwidth_gbps debe ser mayor que 0")
+
+        if not 0 <= target < 10:
+            raise ValueError("target debe ser un número entre 0 y 9")
+
+        clk_freq = self.hardware.get_clk_freq(port_id)
+        frac_width = self.hardware.get_counter_frac_width(port_id)
+        counter, counter_frac = self.calculate_bandwidth_params(
+            clk_freq=clk_freq,
+            bandwidth_gbps=bandwidth_gbps,
+            frame_length=length,
+            frac_width=frac_width,
+        )
+
+        self.hardware.set_generator_traffic(
+            port_id=port_id,
+            enabled=enabled,
+            length=length,
+            counter=counter,
+            counter_frac=counter_frac,
+            target=target,
+        )
+        self._follow_generator(port_id, target=target, enabled=enabled, length=length, counter=counter, counter_frac=counter_frac, bandwidth_gbps=bandwidth_gbps)
+
+        return counter, counter_frac
     def configure_mux(self, port_id: int, rx_mux: str | None = None, tx_mux: str | None = None) -> None:
         self._validate_port_id(port_id)
         allowed_rx = {"null", "mac", "gen"}
@@ -55,6 +170,27 @@ class PortCountersService:
     def _validate_port_id(self, port_id: int) -> None:
         if port_id not in self.hardware.get_ports():
             raise ValueError(f"Puerto no válido: {port_id}")
+
+    def _follow_generator(
+        self,
+        port_id: int,
+        target: int,
+        enabled: bool,
+        length: int,
+        counter: int,
+        counter_frac: int,
+        bandwidth_gbps: float | None = None,
+    ) -> None:
+        port_generators = self._generators.setdefault(port_id, {})
+        if enabled:
+            entry = {"target": target, "length": length, "counter": counter, "counter_frac": counter_frac}
+            if bandwidth_gbps is not None:
+                entry["bandwidth_gbps"] = bandwidth_gbps
+            port_generators[target] = entry
+        else:
+            port_generators.pop(target, None)
+                   
+    
         
     def get_history(self, port_id: int, limit: int = 100):
      self._validate_port_id(port_id)
@@ -63,3 +199,36 @@ class PortCountersService:
     def get_latest(self, port_id: int):
      self._validate_port_id(port_id)
      return self.repository.get_latest(port_id)
+
+    
+    def calculate_bandwidth_params(
+        self, clk_freq: float, bandwidth_gbps: float, frame_length: int, frac_width: int
+    ) -> tuple[int, int]:
+        bandwidth_bps = bandwidth_gbps * 1e9
+        counter = clk_freq * frame_length * 8 / bandwidth_bps
+        counter_ach = math.ceil(counter)
+        counter_debt = counter_ach - counter
+        counter_frac = math.floor(((2 ** frac_width - 1) / counter) * counter_debt)
+        return counter_ach, counter_frac
+    
+    def get_generator_info(
+        self,
+        port_id: int
+    ) -> list [dict]:
+        self._validate_port_id(port_id)
+        return list(self._generators.get(port_id, {}).values())
+    
+
+    
+    def wait_for_retry_connection(self, attempts: int = 6, delay: float = 2.0) -> bool:
+        ports = self.get_ports()
+        if not ports:
+            return True
+        probe_port = ports[0]
+        for _ in range(attempts):
+            try:
+                self.get_counters(probe_port)
+                return True
+            except Exception:
+                time.sleep(delay)
+        return False

@@ -1,20 +1,21 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 import httpx
 
-from back.grafana.client import GrafanaClient
+from back.grafana.grafana_client import GrafanaClient
 from back.grafana.dashboard_builder import build_port_dashboard
 
 router = APIRouter(prefix="/grafana", tags=["grafana"])
 
 
-def _client() -> GrafanaClient:
-    return GrafanaClient()
+def _client(request: Request | None = None) -> GrafanaClient:
+    host = request.headers.get("host") if request else None
+    return GrafanaClient(request_host=host)
 
 
 @router.get("/health")
-def grafana_health():
+def grafana_health(request: Request):
     try:
-        return _client().health()
+        return _client(request).health()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=503, detail=f"Grafana no disponible: {e}")
 
@@ -55,17 +56,17 @@ def grafana_health():
 
 
 @router.post("/ports/{port_id}/dashboard")
-def create_port_dashboard(port_id: int):
+def create_port_dashboard(port_id: int, request: Request):
     try:
-        result = _client().create_or_update_dashboard(build_port_dashboard(port_id))
+        result = _client(request).create_or_update_dashboard(build_port_dashboard(port_id))
         return {"uid": f"port-{port_id}", "url": result.get("url"), "status": result.get("status")}
     except httpx.HTTPError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
 
 @router.post("/ports/dashboards/all")
-def create_all_port_dashboards(port_count: int = 4):
-    client = _client()
+def create_all_port_dashboards(request: Request, port_count: int = 4):
+    client = _client(request)
     results = []
     for port_id in range(port_count):
         try:
@@ -77,8 +78,8 @@ def create_all_port_dashboards(port_count: int = 4):
 
 
 @router.get("/ports/{port_id}/embed-urls")
-def get_port_embed_urls(port_id: int):
-    client = _client()
+def get_port_embed_urls(port_id: int, request: Request):
+    client = _client(request)
     uid = f"port-{port_id}"
 
     try:

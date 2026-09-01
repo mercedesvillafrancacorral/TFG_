@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from back.dfx.infrastructure.controller_dfx_api import router as dfx_router
 from back.port.infrastructure.inbound.api.controller_api import router
 
 from back.port.infrastructure.inbound.api.grafana_controller import (
@@ -7,9 +8,9 @@ from back.port.infrastructure.inbound.api.grafana_controller import (
 )
 
 app = FastAPI(
-    title="TFG",
+    title="Trabajo Fin de Grado",
     description="configuración y monitorización de red de altas prestaciones",
-    version="1.0.0",
+   
 )
 
 app.add_middleware(
@@ -22,6 +23,7 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(grafana_router)
+app.include_router(dfx_router)
 
 
 @app.get("/")
@@ -31,4 +33,5 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    import os
+    return {"status": "ok", "mode": os.getenv("MODE", "simulation").lower()}

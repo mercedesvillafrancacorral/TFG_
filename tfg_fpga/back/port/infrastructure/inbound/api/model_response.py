@@ -15,6 +15,17 @@ class PortCountersResponse(BaseModel):
     tx_port_out_frames: int
     tx_port_in_true_frames: int
 
+class BandwidthRequest(BaseModel):
+    enabled: bool = Field(default=True, description="Enable/disable generator")
+    length: int = Field(default=64, ge=64, le=9000, description="Frame length in bytes")
+    bandwidth_gbps: float = Field(gt=0, le=10, description="Ancho de banda objetivo (Gbps)")
+
+
+class BandwidthResponse(BaseModel):
+    message: str
+    counter: int
+    counter_frac: int
+
 
 class GeneratorConfigRequest(BaseModel):
     enabled: bool = Field(default=True, description="Enable/disable generator")
