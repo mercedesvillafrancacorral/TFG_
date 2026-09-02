@@ -1,0 +1,3 @@
+[submodule "lib/xfcp"]
+	path = lib/xfcp
+	url = https://github.com/alexforencich/xfcp

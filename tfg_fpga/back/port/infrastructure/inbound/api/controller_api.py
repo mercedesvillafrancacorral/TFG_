@@ -1,0 +1,276 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import datetime, timedelta
+from typing import Optional
+import time
+import subprocess
+import os
+from back.port.infrastructure.inbound.api.dependencies import hardware
+
+from back.port.application.PortCountersService import PortCountersService
+from back.port.infrastructure.inbound.api.dependencies import get_port_service
+from back.port.infrastructure.inbound.api.model_response import (
+    PortsResponse,
+    PortCountersResponse,
+    GeneratorConfigRequest,
+    MuxConfigRequest,
+    MessageResponse,
+    BandwidthRequest,
+    BandwidthResponse,
+)
+
+FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
+
+router = APIRouter(prefix="/ports", tags=["ports"])
+
+
+@router.get("", response_model=PortsResponse)
+def get_ports(service: PortCountersService = Depends(get_port_service)):
+    return PortsResponse(ports=service.get_ports())
+
+
+@router.get("/{port_id}/counters", response_model=PortCountersResponse)
+def get_counters(port_id: int, service: PortCountersService = Depends(get_port_service)):
+    try:
+        counters = service.get_counters(port_id)
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    return PortCountersResponse(
+            rx_port_in_frames=counters.rx_port_in_frames,
+            rx_port_out_frames=counters.rx_port_out_frames,
+            rx_port_gen_frames=counters.rx_port_gen_frames,
+            rx_port_in_true_frames=counters.rx_port_in_true_frames,
+            rx_port_gen_true_frames=counters.rx_port_gen_true_frames,
+            tx_port_in_frames=counters.tx_port_in_frames,
+            tx_port_out_frames=counters.tx_port_out_frames,
+            tx_port_in_true_frames=counters.tx_port_in_true_frames,
+
+        )
+
+
+
+@router.get("/{port_id}/info")
+def get_port_info(port_id: int):
+    """Diagnóstico: parámetros constantes leídos del puerto (rate, anchos de contador, etc.)
+    tal y como quedaron cacheados en el último connect/reconnect. Útil para comparar el
+    mapa de registros entre distintos bitstreams cargados."""
+    try:
+        return hardware.get_port_info(port_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except AttributeError:
+        raise HTTPException(
+            status_code=501,
+            detail="get_port_info no está disponible para el adaptador de hardware actual",
+        )
+
+
+@router.get("/board-registers")
+def get_board_registers():
+    """Diagnóstico: registros crudos de nivel de placa (offset 0x0), sin pasar por
+    Port/TrafficGenerator. Compara esto entre configuraciones para localizar si el
+    bloque de puertos o el de switch/FCL se desplazaron de dirección."""
+    try:
+        return hardware.get_board_registers()
+    except AttributeError:
+        raise HTTPException(
+            status_code=501,
+            detail="get_board_registers no está disponible para el adaptador de hardware actual",
+        )
+
+
+@router.post("/{port_id}/generator", response_model=MessageResponse)
+def configure_generator(
+    port_id: int,
+    request: GeneratorConfigRequest,
+    service: PortCountersService = Depends(get_port_service),
+):  
+    
+    try:
+        service.configure_generator(
+            port_id=port_id,
+            enabled=request.enabled,
+            length=request.length,
+            counter=request.counter,
+            counter_frac=request.counter_frac,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return MessageResponse(
+        message=f"Traffic generator {generator_state} for port {port_id}"
+    )
+
+@router.post("/{port_id}/generator/{target}", response_model=MessageResponse)
+def configure_generator_traffic(
+    port_id: int,
+    target: int,
+    request: GeneratorConfigRequest,
+    service: PortCountersService = Depends(get_port_service),
+):  
+    
+    try:
+        service.configure_generator_traffic(
+            port_id=port_id,
+            enabled=request.enabled,
+            length=request.length,
+            counter=request.counter,
+            counter_frac=request.counter_frac,
+            target=target,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return MessageResponse(
+        message=f"Traffic generator {generator_state} for port {port_id}"
+    )
+@router.post("/{port_id}/generator/{target}/bandwidth",response_model=BandwidthResponse)
+def configure_generator_bandwidth(
+    port_id: int,
+    target: int,
+    request: BandwidthRequest,
+    service: PortCountersService = Depends(get_port_service)
+):
+
+    try :
+        counter,counter_frac = service.configure_generator_bandwidth( port_id, enabled=request.enabled, length=request.length,bandwidth_gbps=request.bandwidth_gbps, target=target,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    generator_state = "enabled" if request.enabled else "disabled"
+    return BandwidthResponse(
+        message=f"Flow {target} {generator_state} for port {port_id} @ {request.bandwidth_gbps} Gbps",
+        counter=counter,
+        counter_frac=counter_frac,
+    )    
+
+@router.get("/traffic_port_generators_info/{port_id}")
+def get_traffic_port_generator (port_id: int, service: PortCountersService = Depends(get_port_service)):
+    try:
+        return{ "port_id": port_id, "generators": service.get_generator_info(port_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/{port_id}/throughput")
+def get_throughput (port_id: int, service: PortCountersService = Depends(get_port_service)):
+    try:
+        return {"port_id": port_id, "metrics": service.get_throughput(port_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@router.post("/{port_id}/mux", response_model=MessageResponse)
+def configure_mux(
+    port_id: int,
+    request: MuxConfigRequest,
+    service: PortCountersService = Depends(get_port_service),
+):
+    try:
+        service.configure_mux(
+            port_id=port_id,
+            rx_mux=request.rx_mux,
+            tx_mux=request.tx_mux,
+        )
+        return MessageResponse(message=f"Mux configurado en el puerto {port_id}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# @router.get("/{port_id}/history")
+# def get_port_history(
+#     port_id: int,
+#     from_time: Optional[str] = Query(None, description="Start time (ISO format)"),
+#     to_time: Optional[str] = Query(None, description="End time (ISO format)"),
+#     limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
+#     service: PortCountersService = Depends(get_port_service),
+# ):
+#     try:
+
+#         start = from_time if from_time else (datetime.now() - timedelta(hours=1)).isoformat()
+#         end = to_time if to_time else datetime.now().isoformat()
+#         results = service.get_history(port_id=port_id, limit=limit)
+#         return {
+#             "port_id": port_id,
+#             "from": start,
+#             "to": end,
+#             "count": len(results),
+#             "data": results,
+#         }
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+# @router.get("/{port_id}/history/latest")
+# def get_latest_counters(
+#     port_id: int,
+#     service: PortCountersService = Depends(get_port_service),
+# ):
+#     try:
+#         counters = service.get_counters(port_id)
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+
+#     try:
+#         latest =service.get_latest(port_id)
+#         return {
+#             "port_id": port_id,
+#             "current": {
+#                 "rx_port_in_frames": counters.rx_port_in_frames,
+#                 "rx_port_out_frames": counters.rx_port_out_frames,
+#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
+#                 "tx_port_in_frames": counters.tx_port_in_frames,
+#                 "tx_port_out_frames": counters.tx_port_out_frames,
+                
+#             },
+#             "last_indexed": latest,
+#         }
+#     except Exception as e:
+#         return {
+#             "port_id": port_id,
+#             "current": {
+#                 "rx_port_in_frames": counters.rx_port_in_frames,
+#                 "rx_port_out_frames": counters.rx_port_out_frames,
+#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
+#                 "tx_port_in_frames": counters.tx_port_in_frames,
+#                 "tx_port_out_frames": counters.tx_port_out_frames,
+                
+#             },
+#             "last_indexed": None,
+#         }
+@router.post("/reset_fpga")
+def reset_fpga(service: PortCountersService = Depends(get_port_service)):
+    script = os.path.join(FPGA_DIR, "program.sh")
+    bit = os.path.join(FPGA_DIR, "fpga.bit")
+    try:
+        result = subprocess.run(
+            ["bash", script, bit],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=FPGA_DIR,
+        )
+        if result.returncode != 0:
+            raise HTTPException(status_code=500, detail="Error al programar la FPGA")
+
+        link_ready = True
+        if os.getenv("MODE", "simulation").lower() == "real":
+            # fpga.bit siempre usa el mapa de registros clasico, aunque justo antes
+            # se hubiera activado el mapa extendido para otro bitstream.
+            hardware.set_register_layout(extended=False)
+            time.sleep(6)
+            hardware.reconnect()
+            link_ready = service.wait_for_retry_connection()
+
+        message = "FPGA reseteada correctamente"
+        if not link_ready:
+            message += (
+                ". La FPGA se ha reprogramado correctamente, pero la conexión con "
+                "los puertos todavía no se ha estabilizado — reintenta en unos segundos."
+            )
+
+        return MessageResponse(message=message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
