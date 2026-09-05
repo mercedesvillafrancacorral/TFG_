@@ -9,7 +9,7 @@ from back.port.infrastructure.inbound.api.grafana_controller import (
 
 app = FastAPI(
     title="Trabajo Fin de Grado",
-    description="configuración y monitorización de red de altas prestaciones",
+    description="Configuración y monitorización de una red de altas prestaciones",
    
 )
 

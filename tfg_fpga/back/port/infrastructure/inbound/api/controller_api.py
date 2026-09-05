@@ -20,7 +20,7 @@ from back.port.infrastructure.inbound.api.model_response import (
 
 FPGA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "fpga"))
 
-router = APIRouter(prefix="/ports", tags=["ports"])
+router = APIRouter(prefix="/ports", tags=[""])
 
 
 @router.get("", response_model=PortsResponse)
@@ -62,7 +62,7 @@ def get_port_info(port_id: int):
     except AttributeError:
         raise HTTPException(
             status_code=501,
-            detail="get_port_info no está disponible para el adaptador de hardware actual",
+            detail="get_port_info is not available for the current hardware adapter   ",
         )
 
 
@@ -76,7 +76,7 @@ def get_board_registers():
     except AttributeError:
         raise HTTPException(
             status_code=501,
-            detail="get_board_registers no está disponible para el adaptador de hardware actual",
+            detail="get_board_registers is not available for the current hardware adapter",
         )
 
 
@@ -171,73 +171,10 @@ def configure_mux(
             rx_mux=request.rx_mux,
             tx_mux=request.tx_mux,
         )
-        return MessageResponse(message=f"Mux configurado en el puerto {port_id}")
+        return MessageResponse(message=f"Mux configured on port {port_id}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# @router.get("/{port_id}/history")
-# def get_port_history(
-#     port_id: int,
-#     from_time: Optional[str] = Query(None, description="Start time (ISO format)"),
-#     to_time: Optional[str] = Query(None, description="End time (ISO format)"),
-#     limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
-#     service: PortCountersService = Depends(get_port_service),
-# ):
-#     try:
-
-#         start = from_time if from_time else (datetime.now() - timedelta(hours=1)).isoformat()
-#         end = to_time if to_time else datetime.now().isoformat()
-#         results = service.get_history(port_id=port_id, limit=limit)
-#         return {
-#             "port_id": port_id,
-#             "from": start,
-#             "to": end,
-#             "count": len(results),
-#             "data": results,
-#         }
-#     except ValueError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @router.get("/{port_id}/history/latest")
-# def get_latest_counters(
-#     port_id: int,
-#     service: PortCountersService = Depends(get_port_service),
-# ):
-#     try:
-#         counters = service.get_counters(port_id)
-#     except ValueError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-
-#     try:
-#         latest =service.get_latest(port_id)
-#         return {
-#             "port_id": port_id,
-#             "current": {
-#                 "rx_port_in_frames": counters.rx_port_in_frames,
-#                 "rx_port_out_frames": counters.rx_port_out_frames,
-#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
-#                 "tx_port_in_frames": counters.tx_port_in_frames,
-#                 "tx_port_out_frames": counters.tx_port_out_frames,
-                
-#             },
-#             "last_indexed": latest,
-#         }
-#     except Exception as e:
-#         return {
-#             "port_id": port_id,
-#             "current": {
-#                 "rx_port_in_frames": counters.rx_port_in_frames,
-#                 "rx_port_out_frames": counters.rx_port_out_frames,
-#                 "rx_port_gen_frames": counters.rx_port_gen_frames,
-#                 "tx_port_in_frames": counters.tx_port_in_frames,
-#                 "tx_port_out_frames": counters.tx_port_out_frames,
-                
-#             },
-#             "last_indexed": None,
-#         }
 @router.post("/reset_fpga")
 def reset_fpga(service: PortCountersService = Depends(get_port_service)):
     script = os.path.join(FPGA_DIR, "program.sh")
@@ -251,7 +188,7 @@ def reset_fpga(service: PortCountersService = Depends(get_port_service)):
             cwd=FPGA_DIR,
         )
         if result.returncode != 0:
-            raise HTTPException(status_code=500, detail="Error al programar la FPGA")
+            raise HTTPException(status_code=500, detail="Error programming the FPGA")
 
         link_ready = True
         if os.getenv("MODE", "simulation").lower() == "real":
@@ -262,7 +199,7 @@ def reset_fpga(service: PortCountersService = Depends(get_port_service)):
             hardware.reconnect()
             link_ready = service.wait_for_retry_connection()
 
-        message = "FPGA reseteada correctamente"
+        message = "FPGA successfully reset"
         if not link_ready:
             message += (
                 ". La FPGA se ha reprogramado correctamente, pero la conexión con "
